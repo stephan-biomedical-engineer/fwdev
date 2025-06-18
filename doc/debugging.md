@@ -55,12 +55,12 @@ Além de evitar conflitos de nomes, dão visibilidade imediata ao tipo de dado u
 Dois comentários finais: o primeiro é relacionado ao ```#pragma once```, diretiva para evitar inclusões recursivas. Apesar de ser amplamente suportada por quase todos os compiladores, não é algo padrão. Se prefere algo totalmente ANSI-C, recomendo usar algo como:
 
 ```C copy
-#ifndef __HAL_SER_H__
-#define  __HAL_SER_H__
+#ifndef __HAL_UART_H__
+#define  __HAL_UART_H__
 
 // file contents
 
-#endif /**  __HAL_SER_H__ /**
+#endif /**  __HAL_UART_H__ /**
 ```
 
 Note que a definição foi criada com base no nome do arquivo, apenas deixando tudo em maiúsculas e colocando underscores no início e no fim.
@@ -81,7 +81,7 @@ extern "C" {
 
 ### Ponteiros opacos
 
-Um outro ponto chama a atenção no arquivo de inclusão, a declaração do tipo de dados personalizado ```hal_ser_dev_t```. Ele é declarado como um ponteiro para uma estrutura do tipo ```struct *hal_ser_dev_s``` mas note que não existe nenhuma definição da estrutura em si. Essa é uma técnica conhecida como ponteiro opaco, onde é possível declarar um ponteiro para uma estrutura sem se conhecer o conteúdo da mesma. Como será visto posteriormente, a estrutura ```struct hal_ser_dev_s``` será declarada apenas na realização da implementação da serial, no arquivo ```hal_ser.c```. Com isso, nenhum detalhe é relevado sobre o dispositivo e a estrutura pode ser personalizada, a depender do port desejado.
+Um outro ponto chama a atenção no arquivo de inclusão: a declaração do tipo de dados personalizado `hal_uart_dev_t`. Ele é declarado como um ponteiro para uma estrutura do tipo `struct *hal_uart_dev_s` mas note que não existe nenhuma definição do conteúdo da estrutura. Essa é uma técnica conhecida como ponteiro opaco, onde é possível declarar um ponteiro para uma estrutura sem se conhecer o conteúdo da mesma. Como será visto posteriormente, a estrutura `struct hal_uart_dev_s` será declarada apenas na realização da implementação da serial, no arquivo `hal_uart.c`. Com isso, nenhum detalhe é relevado sobre o dispositivo e a estrutura pode ser personalizada, a depender do porte desejado.
 
 Para dar vida a nossa implementação, vamos apresentar (só dessa vez!) quatro portes diferentes: Win32, Linux, MacOS e STM32L411 (BlackPill). Assim você vai poder ver claramente as diferenças na realização da implementação. 
 
@@ -97,7 +97,7 @@ Para dar vida a nossa implementação, vamos apresentar (só dessa vez!) quatro 
 
 ```C
 #include "main.h"
-#include "hal_ser.h"
+#include "hal_uart.h"
 
 #define PORT_SER_BUFFER_SIZE 128
 
@@ -105,22 +105,22 @@ Para dar vida a nossa implementação, vamos apresentar (só dessa vez!) quatro 
 
 ## Compilando para uma plataforma específica
 
-Nesse ponto, existem diversos caminhos que podem ser tomados. Vai depender muito do tipo de ferramenta utilizada para build system. As IDEs, em geral, tornam isso mais complicado do que o uso de arquivos de Makefile ou sistemas baseados em cmake. É preciso que se garanta que apenas a realização desejada seja de fato compilada, sem nenhuma definição relacionada a outra plataforma sendo incluída.
+Nesse ponto, existem diversos caminhos que podem ser tomados. Vai depender muito do tipo de ferramenta utilizada no build system. As IDEs, em geral, tornam isso mais complicado do que o uso de arquivos de Makefile ou sistemas baseados em cmake. É preciso que se garanta que apenas a realização desejada seja de fato compilada, sem nenhuma definição relacionada a outra plataforma sendo incluída.
 
-Para facilitar a compatibilização com build systemas baseados em IDE, como o STM32CubeIDE, vamos adotar a abordagem de definir o porte desejado através de um define. Assim é simples tratar via Makefile, onde é possível passar o porte na linha de comando, com algo como ```-DHAL_PORT=STM32L4``` ou criar a definição ```HAL_PORT=STM32L4`` manualmente dentro das opções da IDE.
+Para facilitar a compatibilização com build systems baseados em IDE, como o STM32CubeIDE, vamos adotar a abordagem de definir o porte desejado através de uma definição do pré-processador. Assim é simples tratar via Makefile, onde é possível passar o porte na linha de comando, com algo como `-DHAL_PORT=STM32L4` ou criar a definição `HAL_PORT=STM32L4` manualmente dentro das opções da IDE.
 
 Também iremos organizar todos os portes dentro de um mesmo diretório e criar um arquivo geral que irá selecionar a implementação desejada. 
 
 ```bash
-hal/hal_ser.h
-hal/hal_ser.c
-hal/win32/port_ser.c
-hal/linux/port_ser.c
-hal/macos/port_ser.c
-hal/stm32l4/port_ser.c
+source/hal/hal_uart.h
+source/hal/hal_uart.c
+source/hal/win32/port_ser.c
+source/hal/linux/port_ser.c
+source/hal/macos/port_ser.c
+source/hal/stm32l4/port_ser.c
 ```
 
-O arquivo ```hal_ser.c``` irá decidir qual versão do porte compilar através da definição ```HAL_PORT```. Uma possível implementação seria:
+O arquivo `hal_uart.c` irá decidir qual versão do porte compilar através da definição `HAL_PORT`. Uma possível implementação seria:
 
 ```C
 #if HAL_PORT == "WIN32"
@@ -136,32 +136,9 @@ O arquivo ```hal_ser.c``` irá decidir qual versão do porte compilar através d
 #endif
 ```
 
-Nesse ponto já é possível apresentar um exemplo completo mostrando o uso da porta serial. Vamos utilizar um Makefile mas lembre-se que o mesmo poderia ser feito na IDE, bastando que exista uma definição adequada para ```HAL_PORT```.
+Nesse ponto já é possível apresentar um exemplo completo mostrando o uso da porta serial. Vamos utilizar um Makefile mas lembre-se que o mesmo poderia ser feito na IDE, bastando que exista uma definição adequada para `HAL_PORT`.
 
-```C
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include "hal_ser.h"
-
-int main(void)
-{
-    hal_ser_dev_t dev = hal_ser_open(HAL_SER_PORT0);
-
-    if(dev)
-    {
-        uint8_t *data = (uint8_t *) "I am portable !\n";
-        size_t size = strlen((uint8_t *)data);
-
-        hal_ser_write(dev,data,size);
-        hal_ser_close(dev);
-    }
-
-    return 0;
-}
-```
 
 Para compilação, use o Makefile abaixo:
 
