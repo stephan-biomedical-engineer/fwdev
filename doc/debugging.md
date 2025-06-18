@@ -2,7 +2,7 @@
 # Depuração
 
 > [!NOTE]
-> Useful information that users should know, even when skimming content.
+> :brain:
 
 Todo mundo erra. É mais fácil admitir isso e tomar as preucações para eliminar rapidamente os erros. Em ambientes profissionais de desenvolvimento a falha de software, comumente chamada de "bug" ou erro, pode ser mitigada de diversas formas, a depender de quanto investimento se tem disponível. Por exemplo, existem ambientes com desenvolvimento em pares de desenvolvedores com outros desenvolvedores focados em revisão de código, permitindo que ocódigo seja analisado por várias pessoas antes de ser testado e colocado em produção. Também é muito comum a criação de código em "salas limpas", ambientes livres de interrupções para que o foco seja mantido no trabalho em desenvolvimento. A recente onda de IAs tem permitido também o uso de ferramentas automatizadas de revisão e sugestão de correção. 
 

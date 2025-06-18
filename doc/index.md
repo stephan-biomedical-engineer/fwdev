@@ -14,3 +14,12 @@ A forma como será indicada irá se assemelhar ao texto a seguir:
 
 > [!NOTE]
 > :brain: 
+
+
+
+
+
+
+## Tips
+
+Emojis: https://awes0mem4n.github.io/emojis-github.html
