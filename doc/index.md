@@ -10,7 +10,7 @@ Durante a leitura do conteúdo, algumas seções podem ser utilizadas para indic
 * :exploding_head: contém dicas bombásticas
 * :older_man: contém dicas baseadas na experiência
 
-A forma como será indicada irá se assemelhar ao texto a seguir:
+Por exemplo, para um conteúdo criado por humanos, teremos:
 
 > [!NOTE]
 > :brain: 
