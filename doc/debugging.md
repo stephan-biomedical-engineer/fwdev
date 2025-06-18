@@ -34,9 +34,7 @@ A implementação diretamente para o processador acaba sendo até mesmo mais sim
 
 Com isso em mente, a proposta é desenvolver uma abstração inicial com o mínimo necessário para operação. Você pode extender esse arquivo depois, com mais funcionalidades. Por exemplo, pode adicionar callbacks para recepção por interrupção ou mesmo DMA, callbacks para indicação de fim de transmissão, etc. O arquivo de inclusão está a seguir, denominado de "hal_uart.h". As explicações serão dadas posteriormente.
 
-
-```C
-```
+[Code](https://github.com/marcelobarrosufu/fwdev/blob/b156bcffe07d7005796ca77682ff5ff5acee0ab9/source/port/hal_uart.h#L1-L38)
 
 Algumas explicações são importantes. Longe de serem apenas manias do autor, elas refletem anos de desenvolvimento e estudo, criando interfaces que funcionam, geram poucos erros e são fáceis de serem portadas e mantidas. 
 
