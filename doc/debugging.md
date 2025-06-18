@@ -138,7 +138,7 @@ O arquivo `hal_uart.c` irá decidir qual versão do porte compilar através da d
 
 Nesse ponto já é possível apresentar um exemplo completo mostrando o uso da porta serial. Vamos utilizar um Makefile mas lembre-se que o mesmo poderia ser feito na IDE, bastando que exista uma definição adequada para `HAL_PORT`.
 
-https://github.com/marcelobarrosufu/fwdev/blob/abd435760b30f68c2fa9f4071fd7c43db37adeaf/test/hal/utl_dbg/main.c
+https://github.com/marcelobarrosufu/fwdev/blob/ff0fde98f0564b7762885dedb0cd874bd1858465/test/hal/utl_dbg/main.c#L1-L22
 
 Para compilação, use o Makefile abaixo:
 
