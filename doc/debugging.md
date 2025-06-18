@@ -164,7 +164,7 @@ Uma vez que seu código roda no PC, existem diversas ferramentas que estão à s
 
 ## Abstração para depuração
 
-Nesse ponto já temos as bases necessárias para criação de abstrações de hardware e seria apropriado criar um novo módulo de portabilidade chamadao "debug" ou simplesmente "dbg". O papel dele, como o nome sugere, é permitir a impressão e dump de mensagens de depuração. Em sistemas embarcados podemos fazer esses logs serem enviados via serial. Num porte para PC um caminho possível pode ser a geração de arquivos. 
+Nesse ponto já temos as bases necessárias para criação de abstrações de hardware e seria apropriado criar um novo módulo de portabilidade chamada "debug" ou simplesmente "dbg". O papel dele, como o nome sugere, é permitir a impressão e dump de mensagens de depuração. Em sistemas embarcados podemos fazer esses logs serem enviados via serial. Num porte para PC um caminho possível pode ser a geração de arquivos. 
 
 Adicionalmente, o módulo "dbg" vai permitir a introdução do conceito associado a "system calls".
 
@@ -174,7 +174,7 @@ Para a interface de depuração, vamos criar um arquivo de inclusão como defini
 
 Vale a pena deixar aqui uma observação: esse módulo vai fazer uso de funções e macros com parâmetros variáveis, algo comumente condenado em aplicações embarcadas críticas por poder levar a usos indevidos de memória (alocação, estouros, etc). Enquanto entendemos o motivo óbvio, a ideia é que esses logs não façam parte do firmware final, sendo apenas para desenvolvimento.
 
-O arquivo ```utl_log.h``` é apresentado a seguir, inteiro. Ele será explicado a seguir.
+O arquivo `utl_log.h` é apresentado a seguir, inteiro. Ele será explicado a seguir.
 
 ```C
 #pragma once
@@ -218,7 +218,7 @@ uint8_t* utl_dbg_mod_name(utl_dbg_modules_t mod_idx);
 
 Por usar muitas macros (e X macros !), o arquivo é relativamente complexo para um iniciante na linguagem C. Mas ele traz muita informação e conhecimento, valendo a pena investir algum tempo entendendo os seus detalhes.
 
-O princípio básico de funcionamento desse arquivo (detahes adiantes) é que se tem uma variável de 32 bits onde cada bit permite o controle de um módulo de depuração. Assim, cada módulo pode ser ativado e desativado individualmente. Para a impressão, é criada uma macro que segue a mesma lógica de um printf() da linguagem C, denominada ```UTL_DBG_PRINTF()```. A diferença é que essa macro recebe como primeiro argumento a qual módulo o log se refere. Se esse módulo estiver com logs habilitados, esse log será impresso. A outra macro é a ```UTL_DBG_DUMP()```, usada principalmente para realizar dumps em formato parecido com o aplicativo hexdump do Linux.
+O princípio básico de funcionamento desse arquivo (detalhes adiantes) é que se tem uma variável de 32 bits onde cada bit permite o controle de um módulo de depuração. Assim, cada módulo pode ser ativado e desativado individualmente. Para a impressão, é criada uma macro que segue a mesma lógica de um printf() da linguagem C, denominada `UTL_DBG_PRINTF()`. A diferença é que essa macro recebe como primeiro argumento a qual módulo o log se refere. Se esse módulo estiver com logs habilitados, esse log será impresso. A outra macro é a `UTL_DBG_DUMP()`, usada principalmente para realizar dumps em formato parecido com o aplicativo `hexdump` do Linux.
 
 A primeira ação nesse arquivo é definir a lista dos módulos existentes e qual bit ele irá usar na variável de controle. Isso poderia ter sido feito como a seguir:
 
@@ -240,14 +240,15 @@ const uint8_t* utl_log_mod_name[] = {
     (uint8_t*) "UTL_DBG_MOD_ADC",
     // nova string
 };
+```
 
 Todos nós sabemos onde isso acaba: em erro ! Manter código que demanda alterações em várias partes é geralmente um pesadelo e fica muito fácil cometer erros. Uma forma de contornar esse problema é o uso de X macros [REF]. Com a X macro fica possível realizar alterações em apenas um lugar, mantendo a integridade do código. 
 
 Para entender como isso funciona é preciso ficar claro como o pré-processador da linguagem C trabalha. Quando você cria definições personalizadas, o compilador não realiza nenhum operação sobre elas. Apenas faz anotações, salva o que foi associado e nem se precupa em fazer validações adicionais recursivas. Qualquer avaliação só será feita no momento real do uso da definição. 
 
-No código, existe uma definição de uma macro chamada ```XMACRO_DBG_MODULES```. Essa macro é associada a uma outra macro, chamada de ```X(mod,index)```, com dois parâmetros: o nome do módulo e a index do bit relacionado. Note que a macro não foi definida ainda e tudo bem, afinal XMACRO_DBG_MODULES também não foi usada, logo não existe a necessidade de expansão ou avaliação das macros envolvidas.
+No código, existe uma definição de uma macro chamada `XMACRO_DBG_MODULES`. Essa macro é associada a uma outra macro, chamada de `X(mod,index)`, com dois parâmetros: o nome do módulo e a index do bit relacionado. Note que a macro não foi definida ainda e tudo bem, afinal XMACRO_DBG_MODULES também não foi usada, logo não existe a necessidade de expansão ou avaliação das macros envolvidas.
 
-Assim, o que se tem até agora é que XMACRO_DBG_MODULES será trocada, futuramente, pelas avaliações da macro X. Eu gosto de ver essa parte como uma base de dados, onde as linhas são os registros dados por macros X e os campos são separados são os argumentos da macro X, separados por vírgulas. Lembre-se que a backslash "\" serve apenas para continuar a macro na linha de baixo. No fundo, seria equivalente a se escrever como a seguir:
+Assim, o que se tem até agora é que `XMACRO_DBG_MODULES` será trocada, futuramente, pelas avaliações da macro X. Eu gosto de ver essa parte como uma base de dados, onde as linhas são os registros dados por macros X e os campos são separados são os argumentos da macro X, separados por vírgulas. Lembre-se que a backslash "\" serve apenas para continuar a macro na linha de baixo. No fundo, seria equivalente a se escrever como a seguir:
 
 ```C
 #define XMACRO_DBG_MODULES X(UTL_DBG_MOD_APP, 0)  X(UTL_DBG_MOD_SER, 1)  X(UTL_DBG_MOD_ADC, 2)
@@ -255,13 +256,13 @@ Assim, o que se tem até agora é que XMACRO_DBG_MODULES será trocada, futurame
 
 Obviamente, a backslash traz mais legibilidade e facilidade de adição.
 
-No momento em que o desenvolvedor pretende avaliar essa base de dados, ele lança mão da definição da macro X e uso da macro XMACRO_DBG_MODULES, forçando o pré-processador a avaliar tudo que estava pendente. Para entender isso, é melhor uma análise por partes. Primeiro veja a declaração da macro X:
+No momento em que o desenvolvedor pretende avaliar essa base de dados, ele lança mão da definição da macro X e uso da macro `XMACRO_DBG_MODULES`, forçando o pré-processador a avaliar tudo que estava pendente. Para entender isso, é melhor uma análise por partes. Primeiro veja a declaração da macro X:
 
 ```C
 #define X(MOD, INDEX) MOD = INDEX,
 ```
 
-Aqui, ela está apenas dizendo que, onde quer que X(mod,index) seja chamada, que é para colocar no lugar ```MOD = INDEX,```. Ou seja, se você usar X(TESTE,10) no seu código, isso deveria gerar ```TESTE = 10,```. Só que isso fica mais interessante ao pedir a avaliação de TODA a base de dados criada através da macro XMACRO_DBG_MODULES. É uma definição seguida de avaliação quando temos a seguinte construção (note que é necessário mudar de linha ou a definição da macro X não teria terminado como esperado):
+Aqui, ela está apenas dizendo que, onde quer que X(mod,index) seja chamada, que é para colocar no lugar `MOD = INDEX,`. Ou seja, se você usar X(TESTE,10) no seu código, isso deveria gerar `TESTE = 10,`. Só que isso fica mais interessante ao pedir a avaliação de TODA a base de dados criada através da macro XMACRO_DBG_MODULES. É uma definição seguida de avaliação quando temos a seguinte construção (note que é necessário mudar de linha ou a definição da macro X não teria terminado como esperado):
 
 ```C
 #define X(MOD, INDEX) MOD = INDEX,
@@ -308,7 +309,7 @@ const uint8_t* utl_log_mod_name[] = {
 };
 ```
 
-Para entender o que vai acontecer é preciso explicar mais um aspecto do pré-processador conhecido como "stringfy", no caso o operador "#" que aparece antes de MOD. O stringfy faz o que o nome diz, isto é, gera uma string a partir de um símbolo. Ou seja, MOD não será usado literalmente mas sim substituído pela string equivalente. Se MOD valer UTL_DBG_MOD_APP, #MOD gera "UTL_DBG_MOD_APP". 
+Para entender o que vai acontecer é preciso explicar mais um aspecto do pré-processador conhecido como _stringfy_, no caso o operador "#" que aparece antes de MOD. O stringfy faz o que o nome diz, isto é, gera uma string a partir de um símbolo. Ou seja, MOD não será usado literalmente mas sim substituído pela string equivalente. Se MOD valer UTL_DBG_MOD_APP, #MOD gera "UTL_DBG_MOD_APP". 
 
 Com isso fica mais fácil entender que o pré-processador irá gerar o seguinte código:
 
@@ -328,7 +329,7 @@ Para finalizar, duas observações adicionais sobre o pré-processador. A primei
 #define TXT  "ABC"  "123"
 ```
 
-o pré-processador vai juntar as string acima e TXT irá valer "ABC123". Além disso, "__FILE__" e "__LINE__" são automaticamente substituídas pelo nome do arquivo e da linha em pré-processamento naquele momento. A macro UTL_LOG_HEADER faz essa composição.
+o pré-processador vai juntar as string acima e TXT irá valer "ABC123". Além disso, `__FILE__` e `__LINE__` são automaticamente substituídas pelo nome do arquivo e da linha em pré-processamento naquele momento. A macro UTL_LOG_HEADER faz essa composição.
 
 Para entender, imagine o seguinte uso da macro UTL_DBG_PRINTF():
 
@@ -356,15 +357,15 @@ UTL_LOG_HEADER(UTL_DBG_MOD_APP, "%d -> %d", __FILE__,__LINE__) => "[%s][%s:%d] %
 
 Perceba que foram adicionadas as informações de formatação do nome do módulo, arquivo e linha ao conjunto de especificações de impressão do usuário, gerando uma string única. Além disso, os valores de arquivo e linha corrente foram substituídos (lembre-se que está tudo na mesma linha, no fundo, devido ao o backslash). Dois elementos ainda estão obscuros: o operador "##" presente dentro da chamada do printf() e a macro __VA_ARGS__. 
 
-Apesar de não recomendado, como já dito, é possível criar uma macro com parâmetros variáveis, como se tem no printf() ou mesmo no suporte nativo da linguagem C. No caso, a macro __VA_ARGS__ representa a lista de parãmetros passada. Já o operador "##", também conhecido como [NOME REF], apenas juntas as duas coisas em uma só. Ou seja, teremos o seguinte na composição final da macro de debug:
+Apesar de não recomendado, como já dito, é possível criar uma macro com parâmetros variáveis, como se tem no printf() ou mesmo no suporte nativo da linguagem C. No caso, a macro __VA_ARGS__ representa a lista de parâmetros passada. Já o operador "##", também conhecido como [NOME REF], apenas juntas as duas coisas em uma só. Ou seja, teremos o seguinte na composição final da macro de debug:
 
 ```C
 printf("[%s][%s:%d] %d -> %d", (char*) utl_dbg_mod_name(UTL_DBG_MOD_APP), "port_ser.c", 123, 10, 20);
 ```
 
-É isso. O "do { } while(0)" é somente uma forma de fazer um bloco em C, poderia ter sido feito de outra forma. O código apenas fica mais resiliente apossíveis  erros quando se coloca todas essas macros dentro de um bloco "{}", criando um contexo local. 
+É isso. O "do { } while(0)" é somente uma forma de fazer um bloco em C, poderia ter sido feito de outra forma. O código apenas fica mais resiliente a possíveis  erros quando se coloca todas essas macros dentro de um bloco "{}", criando um contexto local. 
 
-A implementação do módulo "utl_dbg.c" é relativamente simples, dada a seguir. Perceba que a variável "utl_dbg_mods_activated" controla os módulos ativos no momento, como um campo de bits, como já mencionado.
+A implementação do módulo "utl_dbg.c" é relativamente simples, dada a seguir. Perceba que a variável `utl_dbg_mods_activated` controla os módulos ativos no momento, como um campo de bits, como já mencionado.
 
 ```C
 #include <stdint.h>
