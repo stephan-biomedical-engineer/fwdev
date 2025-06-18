@@ -1,69 +1,41 @@
+<!--- cSpell:enable --->
 
-# Depuração
+# Depuração de firmware
 
 > [!NOTE]
 > :brain:
 
-Todo mundo erra. É mais fácil admitir isso e tomar as preucações para eliminar rapidamente os erros. Em ambientes profissionais de desenvolvimento a falha de software, comumente chamada de "bug" ou erro, pode ser mitigada de diversas formas, a depender de quanto investimento se tem disponível. Por exemplo, existem ambientes com desenvolvimento em pares de desenvolvedores com outros desenvolvedores focados em revisão de código, permitindo que ocódigo seja analisado por várias pessoas antes de ser testado e colocado em produção. Também é muito comum a criação de código em "salas limpas", ambientes livres de interrupções para que o foco seja mantido no trabalho em desenvolvimento. A recente onda de IAs tem permitido também o uso de ferramentas automatizadas de revisão e sugestão de correção. 
+Todo mundo erra. É mais fácil admitir isso e tomar as precauções para eliminar rapidamente os erros. Em ambientes profissionais de desenvolvimento a "falha" de software, comumente chamada de "bug" ou "erro", pode ser mitigada de diversas formas, a depender de quanto investimento se tem disponível. Por exemplo, existem ambientes com desenvolvimento feito aos pares (dois programadores)e com código sendo revisto por outros, permitindo que o código seja analisado por várias pessoas antes de ser testado e colocado em produção. Também é muito comum a criação de código em "salas limpas", ambientes livres de interrupções para que o foco seja mantido no trabalho em desenvolvimento. A recente onda de IAs tem permitido também o uso de ferramentas automatizadas de revisão e sugestão de correção. Cada estratégia de desenvolvimento tem o seu custo.
 
-Independente do seu orçamento, é interessante trabalhar com o objetivo de minimizar as falhas cometidas, tentando encontrar a maioria delas ainda no seu teste inicial de bancada. Para isso, é preciso lançar mão de ferramentas de depuração eficientes, técnicas de desenvolvimento apropriadas e muita análise. Nesse capítulo vamos discutir formas de trabalhar como foco em depuração, evitando propagar falhas no processo de desenvolvimento de software embarcado.
+Independente do seu orçamento, é interessante trabalhar com o objetivo de minimizar as falhas cometidas, tentando encontrar a maioria delas ainda no seu teste inicial de bancada. Para isso, é preciso lançar mão de ferramentas de depuração eficientes, técnicas de desenvolvimento apropriadas e muita análise. Nesse capítulo vamos discutir formas de trabalhar como foco em depuração, evitando propagar falhas no processo de desenvolvimento de software embarcado. O tópico é extenso e passar por abstrações de hardware, logs, testes automatizados e até mesmo uma discussão sobre _system calls_.
 
 ## Desenvolva no PC o quanto puder
 
-Em sistemas embarcados é comum ficarmos escravos do hardware que estamos usando. Normalmente existem muitos periféricos de hardware que tendem a dificultar a tarefa de realizar parte do desenvolvimento no PC. Aspectos temporais podem tornar isso ainda mais complexo, ao exigir que eventos sejam sincronizados de forma precisa.
+Em sistemas embarcados é comum ficarmos escravos do hardware que estamos usando. Normalmente existem muitos periféricos de hardware que tendem a dificultar a tarefa de realizar parte do desenvolvimento no PC. Aspectos temporais podem tornar isso ainda mais complexo, ao exigir que eventos sejam sincronizados de forma precisa. Além disso, a ausência de uma placa pode atrasar o desenvolvimento caso se decida fazer tudo diretamente no hardware final.
 
-Enquanto isso possa realmente justificar algus casos de desenvolvimento, a boa notícia é que muita coisa pode ser feita sem que se tenha um hardware em mãos, bastando usar boas técnicas de desenvolvimento, criando abstrações de hardware capazes de permitir o desenvolvimento no PC. Com tudo desenvolvido, o trabalho de porte e verificação de funcionamento na plataforma final de hardware se torna mais simples e, principalmente, reduz o tempo de desenvolvimento ou, se preferir, reduz o custo do projeto.
+Enquanto isso possa realmente justificar alguns casos de desenvolvimento, a boa notícia é que muita coisa pode ser feita sem que se tenha um hardware em mãos, bastando usar boas técnicas de desenvolvimento, criando abstrações de hardware capazes de permitir o desenvolvimento no PC. Com tudo desenvolvido, o trabalho de porte e verificação de funcionamento na plataforma final de hardware se torna mais simples e, principalmente, reduz o tempo de desenvolvimento. Se preferir, entenda como redução de custo do projeto.
 
-## Criando boas abstrações
+## Hardware Abstraction Layer (HAL)
 
-Os fabricantes de microcontroladores costumam fornecer suas implementações (ou drivers) para os periféricos disponíveis no chip. Especialmente para microcontroladores baseados em núcleos de processamento Cortex M, a arquitetura de software conta com pelo menos dois níveis de abstração. A primeira é a abstração do núcleo de processamento, fornecida pela ARM e conhecida como CMSIS (...). Sobre essa abstração é comum o fabricante escrever a sua bibliteca de drivers. No nosso caso, com ferramentas da ST, é possível usar a camada de abstração de hardware da ST, comumente fornecida em dois níveis diferentes:
+Os fabricantes de microcontroladores costumam fornecer suas implementações (ou drivers) para os periféricos disponíveis no chip. Especialmente para microcontroladores baseados em núcleos de processamento Cortex M, a arquitetura de software conta com pelo menos dois níveis de abstração. A primeira é a abstração do núcleo de processamento, fornecida pela ARM e conhecida como CMSIS (Common Microcontroller Software Interface Standard). Sobre essa abstração é comum o fabricante que emprega núcleos ARM escrever a sua biblioteca de drivers. No nosso caso principal, com ferramentas da ST, é possível usar a camada de abstração de hardware da ST, comumente fornecida em dois níveis diferentes:
 
-- HAL (hig level Hardware Abstration Layer): abstração de alto nível, com uso facilitado para o usuário e requerendo pouco conhecimento dos periféricos e registros da ST
-- LL (Low Level abstraction layer): abstração de nível mais baixo, normalmente com marcros e funções que fazem uso direto de registros dos periféricos. Requer algum conhecimento dos periféricos da ST.
+- **HAL** (High Level Hardware Abstration Layer): abstração de alto nível, com uso facilitado para o usuário e requerendo pouco conhecimento dos periféricos e registros da ST
+- **LL** (Low Level abstraction layer): abstração de nível mais baixo, normalmente com macros e funções que fazem uso direto de registros dos periféricos. Requer algum conhecimento dos periféricos da ST.
 
-Para quem está acostumado a usar o HAL da ST, sabe que basta incluir o arquivo de inclusão "main.h" para ter acesso a todos os periféricos e funções da biblioteca. Infelizmente, essa inclusão irá condenar o seu projeto a uma eterna dependência do HAL da ST. Se pretende validar antes no PC ou ter um código mais portável entre fabricantes, é determinante criar o seu nível abstração, sem qualquer dependência de registros ou periféricos específicos. Sim, dá um pouco de trabalho, perde-se um pouco de desempenho, mas reduz o custo final (tempo é dinheiro, não é o que dizem ?).
+Para quem está acostumado a usar o HAL da ST, sabe que basta incluir o arquivo de inclusão `main.h` para ter acesso a todos os periféricos e funções da biblioteca. Infelizmente, essa inclusão irá condenar o seu projeto a uma eterna dependência do HAL da ST. Se pretende validar antes no PC ou ter um código mais portável entre fabricantes, é determinante criar o seu nível abstração, sem qualquer dependência de registros ou periféricos específicos. Sim, dá um pouco de trabalho, perde-se um pouco de desempenho, mas pode reduzir o tempo de desenvolvimento/custo final.
 
-Como exemplo didático, vamos criar a seguir uma abstração para a porta serial do microcontrolador, seguindo bons padrões de projeto e evitando qualquer dependência de hardware. Alguns pontos devem ser considerados nesse processo:
+Como exemplo, vamos criar a seguir uma abstração para a porta serial do microcontrolador, seguindo bons padrões de projeto e evitando qualquer dependência de hardware. Alguns pontos devem ser considerados nesse processo:
 
 - podemos ter várias portas seriais diferentes
 - todo o processo de configuração precisa ser replicado na sua interface, sem depender de qualquer pré-definição fornecida pelo fabricante
-- vamos evitar o uso de alocação dinâmica 
+- vamos evitar o uso de alocação dinâmica sempre que possível
 
-Com isso em mente, vamos criar uma abstração inicial com o mínimo necessário para operação. Você extender esse arquivo depois, com mais funcionalidades. Por exemplo, pode adicionar callbacks para recepção por interrupção ou mesmo DMA, callbacks para indicação de fim de transmissão, etc. O arquivo de inclusão está a seguir, denominado de "hal_ser.h". As explicações serão dadas posteriormente.
+A implementação diretamente para o processador acaba sendo até mesmo mais simples do que a implementação para o PC. No PC, a menos que se escreva um código todo em pooling, pode ser necessário lidar com threads, mutexes e outras estruturas de sincronização. 
+
+Com isso em mente, a proposta é desenvolver uma abstração inicial com o mínimo necessário para operação. Você pode extender esse arquivo depois, com mais funcionalidades. Por exemplo, pode adicionar callbacks para recepção por interrupção ou mesmo DMA, callbacks para indicação de fim de transmissão, etc. O arquivo de inclusão está a seguir, denominado de "hal_uart.h". As explicações serão dadas posteriormente.
 
 
 ```C
-#pragma once
-
-typedef enum hal_ser_port_e
-{
-    HAL_SER_PORT0 = 0,
-    HAL_SER_PORT1,
-    HAL_SER_NUM_PORTS,
-} hal_ser_port_t;
-
-typedef enum hal_ser_baud_rate_e
-{
-    HAL_SER_BAUD_RATE_9600 = 0,
-    HAL_SER_BAUD_RATE_19200,
-    HAL_SER_BAUD_RATE_57600,
-    HAL_SER_BAUD_RATE_115200,
-} hal_ser_baud_rate_t;
-
-typedef enum hal_ser_parity_e
-{
-    HAL_SER_PARITY_NONE = 0,
-    HAL_SER_PARITY_ODD,
-    HAL_SER_PARITY_EVEN,
-} hal_ser_parity_t;
-
-typedef struct *hal_ser_dev_s hal_ser_dev_t;
-
-hal_ser_dev_t hal_ser_open(hal_ser_port_t dev);
-bool hal_ser_close(hal_ser_dev_t dev);
-int32_t hal_ser_write(hal_ser_dev_t dev, uint8_t *data, size_t size);
-int32_t hal_ser_read(hal_ser_dev_t dev, uint8_t *data, size_t *size, uint32_t timeout_ms);
-
 ```
 
 Algumas explicações são importantes. Longe de serem apenas manias do autor, elas refletem anos de desenvolvimento e estudo, criando interfaces que funcionam, geram poucos erros e são fáceis de serem portadas e mantidas. 

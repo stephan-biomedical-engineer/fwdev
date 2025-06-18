@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef _cplusplus
+#ifdef _cplusplus
 extern "C" {
 #endif
 
