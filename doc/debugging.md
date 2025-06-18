@@ -32,7 +32,7 @@ Como exemplo, vamos criar a seguir uma abstração para a porta serial do microc
 
 A implementação diretamente para o processador acaba sendo até mesmo mais simples do que a implementação para o PC. No PC, a menos que se escreva um código todo em pooling, pode ser necessário lidar com threads, mutexes e outras estruturas de sincronização. 
 
-Com isso em mente, a proposta é desenvolver uma abstração inicial com o mínimo necessário para operação. Você pode extender esse arquivo depois, com mais funcionalidades. Por exemplo, pode adicionar callbacks para recepção por interrupção ou mesmo DMA, callbacks para indicação de fim de transmissão, etc. O arquivo de inclusão está a seguir, denominado de "hal_uart.h". As explicações serão dadas posteriormente.
+Com isso em mente, a proposta é desenvolver uma abstração inicial com o mínimo necessário para operação. Você pode extender esse arquivo depois, com mais funcionalidades. Por exemplo, pode adicionar callbacks para recepção por interrupção ou mesmo DMA, callbacks para indicação de fim de transmissão, etc. O arquivo de inclusão está a seguir, denominado de `hal_uart.h`. As explicações serão dadas posteriormente.
 
 https://github.com/marcelobarrosufu/fwdev/blob/b156bcffe07d7005796ca77682ff5ff5acee0ab9/source/port/hal_uart.h#L1-L38
 
@@ -40,9 +40,9 @@ Algumas explicações são importantes. Longe de serem apenas manias do autor, e
 
 ### Namespaces
 
-Quem trabalha com linguagens mais modernos do que o C (quase todo mundo?) está acostumado com o conceito de namespacing. A idéia é encapsular, aninhando definições em módulos relacionados [melhorar isso]. Infelizmente, esse conceito não existe em C. Uma forma de tentar imitar o comportamento do namespacing é forçar uma rígida estratégia de nomeação de arquivos e definições, empregando o underscore como separador (o "_"), na notação conhecida como "snake case". Sim, muitos desenvolvedores preferem a lógica do "camel case", onde se omite o underscore e usa-se a primeira letra de cada palavra em maiúscula e o resto em minúsculas. O autor considera o a forma snake case mais legível (e o Python também [REF]), dando a impressão de um espaçco entre palavras. o importante é ter uma notação comum para todos os desenvolvedores do time.
+Quem trabalha com linguagens mais modernos do que o C está acostumado com o conceito de _namespacing_. A idéia é encapsular, aninhando definições em módulos relacionados, evitando conflitos. Infelizmente, esse conceito não existe em C. Uma forma de tentar imitar o comportamento do namespacing é forçar uma rígida estratégia de nomeação de arquivos e definições, empregando o underscore como separador (o "_"), na notação conhecida como "snake case". Sim, muitos desenvolvedores preferem a lógica do "pascal case", onde se omite o underscore e usa-se a primeira letra de cada palavra em maiúscula e o resto em minúsculas. O autor considera o a forma snake case mais legível, dando a impressão de um espaço entre palavras e facilitando a leitura. Caso prefira outra, não tem problema: o importante é ter uma notação comum para todos os desenvolvedores do seu time.
 
-No arquivo apresentado, foram criados três níveis de hierarquia: **hal** para indicar que é um arquivo de inteface de hardware, **ser** que é uma abreviação para porta serial (3 letras é um bom tamanho mas use nomes maiores se preferir) e depois funções ou definições relacionadas com a porta serial, como **open**. O nome final, **hal_ser_open()** permite reduzir conflitos com várias outras partes do código, como uma função de open do adc (**hal_adc_open()**) ou outras funções open sem relacionamento algum com hardware. Confie em mim, é uma excelente prática.
+No arquivo apresentado, foram criados três níveis de hierarquia: **hal** para indicar que é um arquivo de interface de hardware, **uart** que é uma abreviação para porta serial e depois funções ou definições relacionadas com a porta serial, como **open**. O nome final, **hal_uart_open()** permite reduzir conflitos com várias outras partes do código, como uma possível função de open de um adc (**hal_adc_open()**) ou outras funções **open** sem relacionamento algum com hardware. Confie em mim, é uma excelente prática.
 
 Além disso, algumas notações relacionadas a sufixos são recorrentes:
 
@@ -50,21 +50,34 @@ Além disso, algumas notações relacionadas a sufixos são recorrentes:
 - **_t**: para tipos definidos
 - **_s**: para estruturas
 
-Além de evitar conflitos de nomes, dão visibidade imediata ao tipo de dado utilizado.
+Além de evitar conflitos de nomes, dão visibilidade imediata ao tipo de dado utilizado. E, antes que pergunte, eu não incentivo o uso de notação Húngara. Prefiro padronizar tudo com `stdint.h`, `stdbool.h` e `stddef.h`.
 
-Um comentário final é relacionado ao ```#pragma once```, diretiva para evitar inclusões recursivas. Apesar de ser amplamente suportada por quase todos os compiladores, não é algo padrão. Se prefere algo totalmente ANSI-C, recomendo usar algo como:
+Dois comentários finais: o primeiro é relacionado ao ```#pragma once```, diretiva para evitar inclusões recursivas. Apesar de ser amplamente suportada por quase todos os compiladores, não é algo padrão. Se prefere algo totalmente ANSI-C, recomendo usar algo como:
 
-```C
+```C copy
 #ifndef __HAL_SER_H__
 #define  __HAL_SER_H__
 
 // file contents
 
 #endif /**  __HAL_SER_H__ /**
-
 ```
 
-Note que a definição foi criada com base no nome do arquivo, apenas deixando tudo em maiúsculas e colocandos underscores no início e no fim.
+Note que a definição foi criada com base no nome do arquivo, apenas deixando tudo em maiúsculas e colocando underscores no início e no fim.
+
+O segundo comentário é relacionado a proteção de inclusão quando o header é usado por arquivos escritos em C++. O ```extern "C"``` é uma forma de garantir que o código seja compilado como C, evitando problemas de decoração de nomes.
+
+```C copy
+#ifdef _cplusplus
+extern "C" {
+#endif
+
+// file contents, exported as C for further decoration
+
+#ifdef __cplusplus
+}
+#endif
+```
 
 ### Ponteiros opacos
 
