@@ -15,11 +15,12 @@ A forma como será indicada irá se assemelhar ao texto a seguir:
 > [!NOTE]
 > :brain: 
 
+# Sumário
+
+
+* **[Depuração de Firmware](./debugging.md)**: Esse capítulo discute como construir um firmware que seja mais fácil de depurar, com mensagens de erros personalizadas e habilitáveis, adição de módulos de testes e outras boas práticas. A abordagem é tentar desenvolver o máximo possível do firmware no PC, deixando apenas aspectos de tempo real ou hardwares mais  complexos de serem emulados no PC como foco no desenvolvimento direto na plataforma embarcada.
 
 
 
 
-
-## Tips
-
-Emojis: https://awes0mem4n.github.io/emojis-github.html
+<!--  Emojis: https://awes0mem4n.github.io/emojis-github.html -->
