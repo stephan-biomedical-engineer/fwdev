@@ -184,7 +184,10 @@ Sabendo que `utl_dbg_mod_name_get(mod)` devolve uma string com o nome do módulo
 UTL_LOG_HEADER(UTL_DBG_MOD_APP, "%d -> %d", __FILE__,__LINE__) => "[%s][%s:%d] %d -> %d", (char*) utl_dbg_mod_name_get(UTL_DBG_MOD_APP), "source/port_uart.c", 123
 ```
 
-Perceba que foram adicionadas as informações de formatação do nome do módulo, arquivo e linha ao conjunto de especificações de impressão do usuário, gerando uma string única. Além disso, os valores de arquivo e linha corrente foram substituídos (lembre-se que está tudo na mesma linha, no fundo, devido à barra invertida). No entanto, dois elementos ainda estão obscuros: o operador **##** presente dentro da chamada do printf() e a macro `__VA_ARGS__`. 
+Perceba que foram adicionadas as informações de formatação do nome do módulo, arquivo e linha ao conjunto de especificações de impressão do usuário, gerando uma string única. Além disso, os valores de arquivo e linha corrente foram substituídos (lembre-se que está tudo na mesma linha, no fundo, devido à barra invertida). No entanto, dois elementos ainda estão obscuros: o operador **##** presente dentro da chamada do utl_printf() e a macro `__VA_ARGS__`. 
+
+> ![NOTE]
+> :bulb: A função `utl_printf()` segue o mesmo formato da original `utl_printf()` sendo, no fundo, apenas uma implementação mais leve, sem alocação dinâmica e com menos recursos criada especificamente para sistemas embarcados. Uma vantagem adicional é poder testar usando o mesmo código de printf(): lembre-se de que a biblioteca C do PC não é igual à biblioteca C do STM32, normalmente reduzida (o CubeIDE usa a [newlib](https://sourceware.org/newlib/)). No texto, quando for mencionado `printf()`, o código se refere à função `utl_printf()`, a menos que seja explicitamente mencionado o contrário.
 
 ### Variadic Macros
 
@@ -193,7 +196,7 @@ Apesar de não recomendado para uma aplicação final, como já dito anteriormen
 No caso, a macro `__VA_ARGS__` representa a lista de parâmetros passada. Já o operador **##** apenas juntas as duas coisas em uma só. Ou seja, teremos o seguinte na composição final da macro de debug:
 
 ```C
-printf("[%s][%s:%d] %d -> %d", (char*) utl_dbg_mod_name_get(UTL_DBG_MOD_APP), "source/port_uart.c", 123, 10, 20);
+utl_printf("[%s][%s:%d] %d -> %d", (char*) utl_dbg_mod_name_get(UTL_DBG_MOD_APP), "source/port_uart.c", 123, 10, 20);
 ```
 
 É isso. O "do { } while(0)" é somente uma forma de fazer um bloco em C que executa apenas uma vez, poderia ter sido feito de outra forma. O código apenas fica mais resiliente a possíveis erros de expansão (veja uma discussão no [stack overflow](https://pt.stackoverflow.com/questions/80669/por-que-usar-do-while-0) sobre isso). 

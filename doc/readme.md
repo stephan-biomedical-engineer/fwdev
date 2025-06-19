@@ -9,6 +9,7 @@ Durante a leitura do conteúdo, algumas seções podem ser utilizadas para indic
 * :warning: contém conteúdo que pode não seguir totalmente a norma ANSI-C
 * :exploding_head: contém dicas bombásticas
 * :older_man: contém dicas baseadas na experiência
+* :bulb: contém informações adicionais
 
 Por exemplo, para um conteúdo criado por humanos, teremos:
 
