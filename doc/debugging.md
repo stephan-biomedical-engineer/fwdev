@@ -8,21 +8,28 @@
 Todo mundo erra. É mais fácil admitir isso e tomar as precauções para eliminar rapidamente os erros. Em ambientes profissionais de desenvolvimento a "falha" de software, comumente chamada de "bug" ou "erro", pode ser mitigada de diversas formas, a depender de quanto investimento se tem disponível. Por exemplo, existem ambientes com desenvolvimento feito aos pares (dois programadores)e com código sendo revisto por outros, permitindo que o código seja analisado por várias pessoas antes de ser testado e colocado em produção. Também é muito comum a criação de código em "salas limpas", ambientes livres de interrupções para que o foco seja mantido no trabalho em desenvolvimento. A recente onda de IAs tem permitido também o uso de ferramentas automatizadas de revisão e sugestão de correção. Cada estratégia de desenvolvimento tem o seu custo.
 
 Independente do seu orçamento, é interessante trabalhar com o objetivo de minimizar as falhas cometidas, tentando encontrar a maioria delas ainda no seu teste inicial de bancada. Para isso, é preciso lançar mão de ferramentas de depuração eficientes, técnicas de desenvolvimento apropriadas e muita análise. Nesse capítulo vamos discutir formas de trabalhar como foco em depuração, evitando propagar falhas no processo de desenvolvimento de software embarcado. O tópico é extenso e passa por boas abstrações de hardware, logs, testes automatizados e até mesmo uma discussão sobre _system calls_.
-# Verificação formal
-
-Uma vez que seu código roda no PC, existem diversas ferramentas que estão à sua disposição para validação e testes. Para verificação de ponteiros e uso de buffers,alocação de memória, etc, alternativas como Valgrind, memcheck, cppcheck e drmemory podem ser úteis. Para desenvolvimento de testes automatizados, o módulo Unity pode ajudar.
 
 ## Abstração para depuração
 
-Nesse ponto já temos as bases necessárias para criação de abstrações de hardware e seria apropriado criar um novo módulo de portabilidade chamada "debug" ou simplesmente "dbg". O papel dele, como o nome sugere, é permitir a impressão e dump de mensagens de depuração. Em sistemas embarcados podemos fazer esses logs serem enviados via serial. Num porte para PC um caminho possível pode ser a geração de arquivos. 
+Um módulo de depuração é um elementos essencial para o desenvolvimento. Ele deve permitir que o desenvolvedor consiga imprimir mensagens de depuração, realizar dumps de memória e até mesmo gerar logs de eventos. Esses logs são essenciais para entender o que está acontecendo no firmware, onde o acesso ao hardware é limitado e a interação com o usuário é mínima.
 
-Adicionalmente, o módulo "dbg" vai permitir a introdução do conceito associado a "system calls".
+Assim é apropriado criar um módulo portável de debug, ou simplesmente "dbg". O papel dele, como o nome sugere, é permitir a impressão de mensagens de depuração e dumps de dados. Em sistemas embarcados podemos fazer esses logs serem enviados via serial ou via JTAG/SWD. Num porte para PC um caminho possível seria o console ou mesmo a geração de arquivos. 
+
+Adicionalmente, o módulo "dbg" vai permitir a introdução do conceito associado a _system calls_.
 
 ### Interface de depuração
 
-Para a interface de depuração, vamos criar um arquivo de inclusão como definido a seguir. O módulo será denominado de "utl", de utilidades, uma vez que ele é totalmente portável, apenas reusando interfaces já definidas. O que se pretende com o módulo é criar um mecanismo simples que permita ligar e desligar logs relacionados a partes específicas do programa em construção, direcionando esses logs para a saída escolhida.
+Para a interface de depuração, vamos criar um arquivo de inclusão como definido a seguir. O módulo será denominado de "utl", de utilidades, uma vez que ele deve ser totalmente portável, apenas reusando interfaces de hardware, como uma possível UART. O que se pretende com o módulo é criar um mecanismo simples que permita ligar e desligar logs relacionados a partes específicas do programa em construção, direcionando esses logs para a saída escolhida.
 
-Vale a pena deixar aqui uma observação: esse módulo vai fazer uso de funções e macros com parâmetros variáveis, algo comumente condenado em aplicações embarcadas críticas por poder levar a usos indevidos de memória (alocação, estouros, etc). Enquanto entendemos o motivo óbvio, a ideia é que esses logs não façam parte do firmware final, sendo apenas para desenvolvimento.
+> [!NOTE]
+> :warning:
+
+Vale a pena deixar aqui uma observação: esse módulo vai fazer uso de funções e macros com parâmetros variáveis, algo comumente condenado em aplicações embarcadas críticas por poder levar a usos indevidos de memória (alocação, estouros de pilha, etc). Enquanto entendemos o motivo óbvio, a ideia é que esses logs não façam parte do firmware final, sendo apenas para desenvolvimento e podendo ser integralmente desabilitados.
+
+> [!NOTE]
+> :exploding_head:
+
+Vamos aproveitar também para aprender um pouco mais sobre recursos avançados do pré-processador da linguagem C, como o operador *#* que transforma tokens em strings (_stringification_), o operador *##* de concatenação de tokens (_token pasting_) e a técnica _X macro_. Esses recursos são muito úteis para criar código mais limpo e fácil de manter.
 
 O arquivo `utl_log.h` é apresentado a seguir, inteiro. Ele será explicado a seguir.
 

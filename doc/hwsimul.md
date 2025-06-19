@@ -152,7 +152,11 @@ make -DHAL_PORT=win32
 
 Os projetos STM32 também pode ser compilados via Makefile, caso prefira. O inconveniente é ter que fazer a compilação manualmente antes de carregar o programa via IDE para depurar. 
 
+## Verificação formal
+
+Uma vez que seu código roda no PC, existem diversas ferramentas que estão à sua disposição para validação e testes. Para verificação de ponteiros e uso de buffers,alocação de memória, etc, alternativas como Valgrind, memcheck, cppcheck e drmemory podem ser úteis. Para desenvolvimento de testes automatizados, o módulo Unity pode ajudar.
+
+
 ## Wraping up
 
 Apesar de requerer um trabalho adicional, os ganhos ao criar abstrações genéricas e portáveis são enormes. E, uma vez desenvolvidas, podem ser reusadas em outros projetos. Considere isso ao iniciar um novo trabalho !
-
