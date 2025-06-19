@@ -102,7 +102,7 @@ Novamente, o nome do compilador reflete essa relação. Por exemplo, `arm-none-e
 
 ##  System calls e STM32CubeIDE
 
-O código gerado pelo STM32CubeIDE, por exemplo, já inclui uma implementação mínima de *system calls* para o ambiente bare-metal. Essas implementações são encontradas no arquivo `core/source/syscalls.c`, que contém as funções necessárias para suportar a biblioteca C em um microcontrolador STM32.
+O código gerado pelo STM32CubeIDE, por exemplo, já inclui uma implementação mínima de *system calls* para o ambiente bare-metal. Essas implementações são encontradas no arquivo `core/src/syscalls.c`, que contém as funções necessárias para suportar a biblioteca C em um microcontrolador STM32.
 
 Várias dessas funções geralmente vem com corpo vazio, sem implementação específica. Outras tem implementação mínima. Por exemplo, a função `_write` é definida como a seguir, na versão 1.18 do CubeIDE:
 
