@@ -213,7 +213,7 @@ Toda essa discussão nos leva a um novo ponto: onde afinal termina o `printf()` 
 
 Para entender isso é preciso discutir um pouco sobre system calls e como realizar os redirecionamento para que consigamos ter as impressões desejadas. Dê uma parada e leia a parte relacionada a [system calls](./systemcalls.md). Depois volte aqui para entender como isso se relaciona com o módulo de depuração que acabamos de criar.
 
-# Redirecionamento de saída no PC
+### Redirecionamento de saída no PC
 
 Como visto na parte de system calls, o `printf()` depende de uma chamada de sistema para realizar a impressão. Tipicamente isso é feito pela chamada do sistema `write()` no compilador do PC. Já para STM32, o HAL gera uma função `write()` com uma dependência  final representada pela função `__io_putchar()`, com o seguinte protótipo:
 
@@ -225,7 +225,7 @@ Numa implementação para PC bastaria imprimir cada caractere no console. Ok, n�
 
 https://github.com/marcelobarrosufu/fwdev/blob/ad3db00692c05d39d64e5d3027f0614e4d5a7545/source/port/common/port_stdout.c#L1-9
 
-# Redirecionamento de saída em sistemas embarcados
+### Redirecionamento de saída em sistemas embarcados
 
 Agora, para sistemas embarcados, temos algumas alternativas. A mais comum é redirecionar a saída para uma UART. No entanto, ainda não construímos essa abstração de forma a criar um código genérico no módulos de utilidades. Outra forma interessante é redirecionar a saída para o ITM (Instrumentation Trace Macrocell), que é uma parte do processador ARM que permite a depuração e rastreamento de eventos. O ITM é uma forma eficiente de enviar mensagens de depuração sem a necessidade de uma UART ou outro meio físico.
 
