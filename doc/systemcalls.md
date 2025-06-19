@@ -66,16 +66,19 @@ Apesar de parecer que o código foi escrito apenas com funções da libc, sua ex
 | 2      | open  | `int open(const char *pathname, int flags, mode_t mode);`         |
 | 3      | close | `int close(int fd);`                                              |   
  
-Uma lista completa de chamadas de sistema do Linux x64 pode ser encontrada [nesse link]9https://syscalls64.paolostivanin.com/).
+Uma lista completa de chamadas de sistema do Linux x64 pode ser encontrada [nesse link](https://syscalls64.paolostivanin.com/).
 
 
-## Como as chamadas de sistema são resolvidas em sistemas embarcados bare-metal
+## Dependências em sistemas embarcados bare-metal
 
-Em sistemas embarcados do tipo bare-metal, onde não há um sistema operacional presente para atender às chamadas de sistema, as funções da libc precisam ser adaptadas ou reimplementadas. Uma abordagem comum é o uso da `newlib`, uma implementação da biblioteca padrão C projetada para ambientes embarcados.
+> [!NOTE]
+> :brain:
+
+Em sistemas embarcados do tipo bare-metal, onde não há um sistema operacional para fornecer as chamadas de sistema, as funções da libc precisam ser adaptadas ou reimplementadas. Uma abordagem comum é o uso da `newlib`, uma implementação da biblioteca padrão C projetada para ambientes embarcados.
 
 A `newlib` inclui implementações de funções como `printf`, `fopen`, `malloc`, entre outras. No entanto, para que essas funções operem corretamente em um ambiente bare-metal, o desenvolvedor precisa fornecer implementações das funções de baixo nível que normalmente seriam resolvidas via system calls no Linux. Essas funções são conhecidas como *syscalls stubs*.
 
-Por exemplo, a função `write()` da `newlib`, usada internamente por `printf()`, delega sua funcionalidade a uma função chamada `_write`, que deve ser definida pelo usuário. Se essa função não for provida, o processo de linkedição resultará em erro. O usuário poderia implementar `_write` para redirecionar a saída para uma porta serial, um display ou qualquer outro meio de comunicação disponível no sistema embarcado:
+Por exemplo, a função `write()` da `newlib`, usada internamente por `printf()`, delega sua funcionalidade a uma função chamada `_write`, que deve ser definida pelo usuário. Se essa função não for provida, o processo de linkedição resultará em erro. O usuário poderia implementar `_write` para redirecionar a saída para uma porta serial (função `send_uart()` no código abaixo), um display ou qualquer outro meio de comunicação disponível no sistema embarcado:
 
 ```c copy
 int _write(int file, char *ptr, int len) 
@@ -93,16 +96,16 @@ Outras funções que precisam ser definidas incluem `_read`, `_open`, `_close`, 
 
 Portanto, a funcionalidade da biblioteca C em sistemas embarcados depende da integração adequada dessas *stubs*, seja via código do desenvolvedor, seja por bibliotecas auxiliares. Essa arquitetura modular permite que funções de alto nível sejam utilizadas em ambientes altamente restritos, desde que haja uma base mínima de suporte à execução.
 
-Novamente, o nome do compilador reflete essa relação. Por exemplo, `arm-none-eabi-gcc` indica:
+Novamente, o nome do compilador reflete essa relação de dependências do sistema ou libc. Por exemplo, `arm-none-eabi-gcc` indica:
 
 - **arm:** A arquitetura alvo (ARM).
-- **none:** Ausência de sistema operacional (bare-metal).
+- **none:** Ausência de sistema operacional (bare-metal), as system calls e bindings da biblioteca C precisam ser definidas.
 - **eabi:** A ABI (Application Binary Interface) usada, que define como as funções são chamadas e como os dados são organizados na memória.
 - **gcc:** O compilador GNU C.
 
 ##  System calls e STM32CubeIDE
 
-O código gerado pelo STM32CubeIDE, por exemplo, já inclui uma implementação mínima de *system calls* para o ambiente bare-metal. Essas implementações são encontradas no arquivo `core/src/syscalls.c`, que contém as funções necessárias para suportar a biblioteca C em um microcontrolador STM32.
+O código gerado pelo STM32CubeIDE já inclui uma implementação mínima de *system calls* para o ambiente bare-metal. Essas implementações são encontradas no arquivo `core/src/syscalls.c`, que contém as funções necessárias para suportar a biblioteca C em um microcontrolador STM32.
 
 Várias dessas funções geralmente vem com corpo vazio, sem implementação específica. Outras tem implementação mínima. Por exemplo, a função `_write` é definida como a seguir, na versão 1.18 do CubeIDE:
 
@@ -120,9 +123,10 @@ __attribute__((weak)) int _write(int file, char *ptr, int len)
 }
 ```
 
-Note que é uma função do tipo `weak`, ou seja, se o usuário definir uma função com o mesmo nome, essa definição do usuário será utilizada. Caso contrário, a implementação padrão será usada. E, além disso, a função chama `__io_putchar`, que é uma função definida pelo usuário, ou seja, o usuário deve implementar essa função para que a saída funcione corretamente. 
+Note que é uma função do tipo `weak`, ou seja, se o usuário definir uma função com o mesmo nome em outro arquivo e sem o atributo `weak`, essa definição do usuário será utilizada. Caso contrário, a implementação padrão será usada. E, além disso, a função chama `__io_putchar`, que é uma função a ser definida pelo usuário, ou seja, o usuário deve implementar essa função para que a saída funcione corretamente. 
 
 `__io_putchar` é uma função bem simples que apenas decide o futuro de cada byte recebido por `_write`. Redirecioná-lo para uma UART ou ITM (Instrumentation Trace Macrocell) é uma escolha comum. 
+<!-- TODO linkar aqui onde o ITM é implementado, no futuro -->
 
 Outra função, como `_open()`, é definida como:
 

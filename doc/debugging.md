@@ -35,7 +35,7 @@ Vamos aproveitar também para aprender um pouco mais sobre recursos avançados d
 
 O arquivo `utl_log.h` é apresentado a seguir, inteiro. Ele será explicado a seguir.
 
-https://github.com/marcelobarrosufu/fwdev/blob/3e74e216c87708848738c58acf72a1d1d5f7da11/source/utl/utl_dbg.h#L1-L62
+https://github.com/marcelobarrosufu/fwdev/source/utl/utl_dbg.h#L1-L62
 
 Por usar muitas macros (e X macros !), o arquivo é relativamente complexo para um iniciante na linguagem C. Mas ele traz muita informação e conhecimento, valendo a pena investir algum tempo entendendo os seus detalhes.
 
@@ -208,8 +208,15 @@ https://github.com/marcelobarrosufu/fwdev/blob/243c10ce686eb3b34d220e4a2df49a3d6
 
 Toda essa discussão nos leva a um novo ponto: onde afinal termina o `printf()` ? No PC, isso vai virar uma impressão no console, ou no arquivo representado por `stdout`. Mas, e num sistema embarcado ? Nele não temos os tradicionais arquivos de entrada e saída, `stdin` e `stdout`, qual será o resultado dessa operação ? 
 
-Para entender isso é preciso discutir um pouco sobre system calls e como realizar os redirecionamento para que consigamos ter as impressões desejadas. Leia a parte relacionada a [system calls](./systemcalls.md) e depois volte aqui.
+Para entender isso é preciso discutir um pouco sobre system calls e como realizar os redirecionamento para que consigamos ter as impressões desejadas. Dê uma parada e leia a parte relacionada a [system calls](./systemcalls.md). Depois volte aqui para entender como isso se relaciona com o módulo de depuração que acabamos de criar.
 
+# Redirecionamento de saída
+
+Como visto na parte de system calls, o `printf()` depende de uma chamada de sistema para realizar a impressão. Para STM32, o HAL gera uma dependência onde a chamada final é representada pela função `__io_putchar()`, com o seguinte protótipo:
+
+```c
+int __io_putchar(int ch) __attribute__((weak));
+```
 
 
 
