@@ -35,7 +35,7 @@ Vamos aproveitar também para aprender um pouco mais sobre recursos avançados d
 
 O arquivo `utl_log.h` é apresentado a seguir, inteiro. Ele será explicado a seguir.
 
-https://github.com/marcelobarrosufu/fwdev/blob/main/source/utl/utl_dbg.c#L1-L62
+https://github.com/marcelobarrosufu/fwdev/blob/5de2895cbb409f516fac634afa0be4f58b92ad79/source/utl/utl_dbg.h#L1-L62
 
 Por usar muitas macros (e X macros !), o arquivo é relativamente complexo para um iniciante na linguagem C. Mas ele traz muita informação e conhecimento, valendo a pena investir algum tempo entendendo os seus detalhes.
 
@@ -202,7 +202,7 @@ Para finalizar, como o nome do arquivo pode ser relativamente longo, a função 
 
 A implementação do módulo `utl_dbg.c` é relativamente simples, dada a seguir. Perceba que a variável `utl_dbg_mods_activated` controla os módulos ativos no momento, como um campo de bits, como já mencionado.
 
-https://github.com/marcelobarrosufu/fwdev/blob/243c10ce686eb3b34d220e4a2df49a3d603d68e2/source/utl/utl_dbg.c#L1-L72
+https://github.com/marcelobarrosufu/fwdev/blob/5de2895cbb409f516fac634afa0be4f58b92ad79/source/utl/utl_dbg.c#L1-L73
 
 ## System Calls e printf
 
