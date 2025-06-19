@@ -31,6 +31,8 @@ Vale a pena deixar aqui uma observação: esse módulo vai fazer uso de funçõe
 
 Vamos aproveitar também para aprender um pouco mais sobre recursos avançados do pré-processador da linguagem C, como o operador **#** que transforma tokens em strings (_stringification_), o operador **##** de concatenação de tokens (_token pasting_) e a técnica **X macro**. Esses recursos são muito úteis para criar um código mais limpo e fácil de manter.
 
+### X macros
+
 O arquivo `utl_log.h` é apresentado a seguir, inteiro. Ele será explicado a seguir.
 
 https://github.com/marcelobarrosufu/fwdev/blob/3e74e216c87708848738c58acf72a1d1d5f7da11/source/utl/utl_dbg.h#L1-L62
@@ -132,6 +134,8 @@ const uint8_t* utl_log_mod_name[] = {
 };
 ```
 
+### Stringification
+
 Para entender o que vai acontecer é preciso explicar mais um aspecto do pré-processador conhecido como _stringification_, no caso realizado pelo operador "#" que aparece antes de `MOD`. A _stringification_ faz o que o nome diz, isto é, gera uma string a partir de um token. Ou seja, MOD não será usado literalmente mas sim substituído pela token equivalente e como uma string. Se `MOD` vale `UTL_DBG_MOD_APP`, `#MOD` gera `UTL_DBG_MOD_APP`. 
 
 Com isso fica mais fácil entender que o pré-processador irá gerar o seguinte código:
@@ -145,6 +149,8 @@ const uint8_t* utl_log_mod_name[] = {
 ```
 
 Note que o campo `INDEX` não foi usado dentro da definição da macro X por não ter utilidade nesse caso e que depois foi feita também uma remoção da macro X via undef. 
+
+### Concatenação de strings
 
 Para finalizar, duas observações adicionais sobre o pré-processador. A primeira é sobre a concatenação automática de strings. Por exemplo, se você faz algo como
 
@@ -179,6 +185,8 @@ UTL_LOG_HEADER(UTL_DBG_MOD_APP, "%d -> %d", __FILE__,__LINE__) => "[%s][%s:%d] %
 ```
 
 Perceba que foram adicionadas as informações de formatação do nome do módulo, arquivo e linha ao conjunto de especificações de impressão do usuário, gerando uma string única. Além disso, os valores de arquivo e linha corrente foram substituídos (lembre-se que está tudo na mesma linha, no fundo, devido à barra invertida). No entanto, dois elementos ainda estão obscuros: o operador **##** presente dentro da chamada do printf() e a macro `__VA_ARGS__`. 
+
+### Variadic Macros
 
 Apesar de não recomendado para uma aplicação final, como já dito anteriormente, em ANSI-C é possível criar uma macro com parâmetros variáveis através de uma extensão conhecida como _variadic macro_, parecido (mas não igual) ao que se tem nativo da linguagem C para funções [funções com argumentos variáveis](https://www.gnu.org/software/c-intro-and-ref/manual/html_node/Variable-Number-of-Arguments.html) (_variadic functions_). 
 
