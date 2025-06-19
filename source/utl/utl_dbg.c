@@ -17,7 +17,7 @@ const char* utl_dbg_base_name_get(const char* full_path)
 {
     const char* base_name = full_path;
 
-    while (*full_path) 
+    while(*full_path)
     {
         if(*full_path == '/' || *full_path == '\\')
             base_name = full_path + 1;
