@@ -17,7 +17,7 @@ Assim é apropriado criar um módulo portável de debug, ou simplesmente "dbg". 
 
 Adicionalmente, o módulo "dbg" vai permitir a introdução do conceito associado a _system calls_.
 
-### Interface de depuração
+## Interface de depuração
 
 Para a interface de depuração, vamos criar um arquivo de inclusão como definido a seguir. O módulo será denominado de "utl", de utilidades, uma vez que ele deve ser totalmente portável, apenas reusando interfaces de hardware, como uma possível UART. O que se pretende com o módulo é criar um mecanismo simples que permita ligar e desligar logs relacionados a partes específicas do programa em construção, direcionando esses logs para a saída escolhida.
 
@@ -196,11 +196,11 @@ A implementação do módulo `utl_dbg.c` é relativamente simples, dada a seguir
 
 https://github.com/marcelobarrosufu/fwdev/blob/243c10ce686eb3b34d220e4a2df49a3d603d68e2/source/utl/utl_dbg.c#L1-L72
 
-## System Calls
+## System Calls e printf
 
-Toda essa discussão nos leva a um novo ponto: onde afinal termina o `printf()` ? No PC, isso vai virar uma impressão no console, ou no arquivo representado por `stdout`. Mas, e num sistema embarcados ? Nele não temos os tradicionais arquivos de entrada e saída, `stdin` e `stdout`, qual será o resultado dessa operação ? 
+Toda essa discussão nos leva a um novo ponto: onde afinal termina o `printf()` ? No PC, isso vai virar uma impressão no console, ou no arquivo representado por `stdout`. Mas, e num sistema embarcado ? Nele não temos os tradicionais arquivos de entrada e saída, `stdin` e `stdout`, qual será o resultado dessa operação ? 
 
-Para entender isso é preciso discutir um pouco sobre system calls e como realizar os redirecionamento para que consigamos ter as impressões desejadas.
+Para entender isso é preciso discutir um pouco sobre system calls e como realizar os redirecionamento para que consigamos ter as impressões desejadas. Leia a parte relacionada a [system calls](./systemcalls.md) e depois volte aqui.
 
 
 
