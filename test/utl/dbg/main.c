@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include "utl_printf.h"
 #include "utl_dbg.h"
 
 int main(void)

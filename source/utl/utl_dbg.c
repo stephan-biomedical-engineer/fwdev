@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include "utl_printf.h"
 #include "utl_dbg.h"
 
 const uint8_t* utl_log_mod_name[] = {
@@ -52,19 +53,19 @@ void utl_dbg_dump(char* stamp, uint8_t* data, size_t size)
 {
     uint8_t* ptr = data;
 
-    printf("%s", stamp);
+    utl_printf("%s", stamp);
 
     for(size_t pos = 0; pos < size; pos++)
     {
         if(pos && (pos % 32 == 0))
-            printf("\n%s", stamp);
+            utl_printf("\n%s", stamp);
 
         if(pos % 32 == 0)
-            printf("%04X ", (unsigned int) pos);
+            utl_printf("%04X ", (unsigned int) pos);
 
-        printf("%02X", *ptr++);
+        utl_printf("%02X", *ptr++);
     }
-    printf("\n");
+    utl_printf("\n");
 }
 
 void utl_dbg_init(void)

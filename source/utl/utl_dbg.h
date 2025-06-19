@@ -45,7 +45,7 @@ extern "C"
     do                                                                                                  \
     {                                                                                                   \
         if(utl_dbg_mod_enabled(mod))                                                                    \
-            printf(UTL_LOG_HEADER(mod, fmt, utl_dbg_base_name_get(__FILE__), __LINE__), ##__VA_ARGS__); \
+            utl_printf(UTL_LOG_HEADER(mod, fmt, utl_dbg_base_name_get(__FILE__), __LINE__), ##__VA_ARGS__); \
     } while(0)
 
 #define UTL_DBG_DUMP(mod, data, size)     \
