@@ -213,17 +213,42 @@ Toda essa discussão nos leva a um novo ponto: onde afinal termina o `printf()` 
 
 Para entender isso é preciso discutir um pouco sobre system calls e como realizar os redirecionamento para que consigamos ter as impressões desejadas. Dê uma parada e leia a parte relacionada a [system calls](./systemcalls.md). Depois volte aqui para entender como isso se relaciona com o módulo de depuração que acabamos de criar.
 
-# Redirecionamento de saída
+# Redirecionamento de saída no PC
 
-Como visto na parte de system calls, o `printf()` depende de uma chamada de sistema para realizar a impressão. Para STM32, o HAL gera uma dependência onde a chamada final é representada pela função `__io_putchar()`, com o seguinte protótipo:
+Como visto na parte de system calls, o `printf()` depende de uma chamada de sistema para realizar a impressão. Tipicamente isso é feito pela chamada do sistema `write()` no compilador do PC. Já para STM32, o HAL gera uma função `write()` com uma dependência  final representada pela função `__io_putchar()`, com o seguinte protótipo:
 
-```c
+```c copy
 int __io_putchar(int ch) __attribute__((weak));
 ```
 
+Numa implementação para PC bastaria imprimir cada caractere no console. Ok, não é muito otimizado. Por outro lado, temos muito poder de processamento e memória e superando facilmente esse possível gargalo. Assim, vamos usar a seguinte implementação para PCs:
 
+https://github.com/marcelobarrosufu/fwdev/blob/ad3db00692c05d39d64e5d3027f0614e4d5a7545/source/port/common/port_stdout.c#L1-9
 
+# Redirecionamento de saída em sistemas embarcados
 
+Agora, para sistemas embarcados, temos algumas alternativas. A mais comum é redirecionar a saída para uma UART. No entanto, ainda não construímos essa abstração de forma a criar um código genérico no módulos de utilidades. Outra forma interessante é redirecionar a saída para o ITM (Instrumentation Trace Macrocell), que é uma parte do processador ARM que permite a depuração e rastreamento de eventos. O ITM é uma forma eficiente de enviar mensagens de depuração sem a necessidade de uma UART ou outro meio físico.
+
+Uma possível implementação do `__io_putchar()` para o ITM utilizando o HAL do CubeIDE é a seguinte:
+
+```C copy
+int __io_putchar(int ch)
+{
+    ITM_SendChar(ch);
+
+    return 1;
+}
+```
+
+Para conseguir usar o ITM é necessário que o microcontrolador tenha pelo menos três linhas de hardware:
+
+- **SWCLK (Serial Wire Clock):** Linha de clock para o ITM.
+- **SWDIO (Serial Wire Debug Input/Output):** Linha de entrada/saída para o ITM.
+- **SWO (Serial Wire Output):** Linha de saída serial para o ITM.
+
+Nem todos os controladores Cortex M possuem esse recurso. Em especial, os Cortex M0 e M0+ não possuem o ITM/SWO, disponível em outros controladores da linha Cortex, como M3, M4, M7 e M33. A interface de depuração também precisa ter suporte ao ITM, normalmente comum em depuradores JTAG/SWD modernos. Os clones simples do ST-LinkV2-1, não possuem suporte ao pino SWO. A forma de usar depende do depurador e do ambiente de desenvolvimento. No STM32CubeIDE, por exemplo, é possível habilitar o ITM na configuração do projeto, permitindo que as mensagens sejam enviadas para o console do IDE.
+
+Para quem usa JLink, existe uma aplicação específica para log via ITM, chamada de [JLink SWO Viewer](https://kb.segger.com/J-Link_SWO_Viewer). Ela permite que as mensagens sejam enviadas para o console do JLink SWO, facilitando muito depuração.
 
 
 <!-- >=> exe: callback para interrupção, abstrair outro modulo, -->
