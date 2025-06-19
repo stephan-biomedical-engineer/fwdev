@@ -17,9 +17,9 @@ Por exemplo, para um conteúdo criado por humanos, teremos:
 
 # Sumário
 
+* **[Criando abstrações de hardware](./hwsimul.md)**: Esse capítulo discute como gerar abstrações de hardware para que o desenvolvimento de firmware no PC seja possível.
 
-* **[Depuração de Firmware](./debugging.md)**: Esse capítulo discute como construir um firmware que seja mais fácil de depurar, com mensagens de erros personalizadas e habilitáveis, adição de módulos de testes e outras boas práticas. A abordagem é tentar desenvolver o máximo possível do firmware no PC, deixando apenas aspectos de tempo real ou hardwares mais  complexos de serem emulados no PC como foco no desenvolvimento direto na plataforma embarcada.
-
+* **[Depuração de Firmware](./debugging.md)**: Esse capítulo discute como construir um firmware que seja mais fácil de depurar, com mensagens de erros personalizadas e habilitáveis, adição de módulos de testes e outras boas práticas.
 
 
 
