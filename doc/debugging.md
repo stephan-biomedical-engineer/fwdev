@@ -35,7 +35,7 @@ Vamos aproveitar também para aprender um pouco mais sobre recursos avançados d
 
 O arquivo `utl_log.h` é apresentado a seguir, inteiro. Ele será explicado a seguir.
 
-https://github.com/marcelobarrosufu/fwdev/source/utl/utl_dbg.h#L1-L62
+https://github.com/marcelobarrosufu/fwdev/blob/main/source/utl/utl_dbg.c#L1-L62
 
 Por usar muitas macros (e X macros !), o arquivo é relativamente complexo para um iniciante na linguagem C. Mas ele traz muita informação e conhecimento, valendo a pena investir algum tempo entendendo os seus detalhes.
 
