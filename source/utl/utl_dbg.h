@@ -41,10 +41,10 @@ extern "C"
 
 #define UTL_LOG_HEADER(mod, fmt, file, line) "[%s][%s:%d] " fmt, (char*) utl_dbg_mod_name_get(mod), file, line
 
-#define UTL_DBG_PRINTF(mod, fmt, ...)                                                                   \
-    do                                                                                                  \
-    {                                                                                                   \
-        if(utl_dbg_mod_enabled(mod))                                                                    \
+#define UTL_DBG_PRINTF(mod, fmt, ...)                                                                       \
+    do                                                                                                      \
+    {                                                                                                       \
+        if(utl_dbg_mod_enabled(mod))                                                                        \
             utl_printf(UTL_LOG_HEADER(mod, fmt, utl_dbg_base_name_get(__FILE__), __LINE__), ##__VA_ARGS__); \
     } while(0)
 
