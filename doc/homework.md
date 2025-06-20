@@ -1,13 +1,13 @@
 # Aulas
 
 - Ambiente de desenvolvimento e debug
-- Criando abstrações de hardware
+- Criando abstrações de hardware / tentar algo em TDD
 - Abstrações para cpu, uart, gpio, timer
 - Estratégias de construção de firmware (loop, corotinas, scheduler, rtos)
 - Entendendo a partida do firmware
 - Entendendo o cortex M4
 - Criando um escalonador de tarefas
-- Criando um sistema de eventos via pensv
+- Criando um sistema de eventos via pendv
 - RTOS e troca de contexto
 - Criando um RTOS mínimo
 
