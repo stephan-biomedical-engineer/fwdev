@@ -186,7 +186,7 @@ UTL_LOG_HEADER(UTL_DBG_MOD_APP, "%d -> %d", __FILE__,__LINE__) => "[%s][%s:%d] %
 
 Perceba que foram adicionadas as informações de formatação do nome do módulo, arquivo e linha ao conjunto de especificações de impressão do usuário, gerando uma string única. Além disso, os valores de arquivo e linha corrente foram substituídos (lembre-se que está tudo na mesma linha, no fundo, devido à barra invertida). No entanto, dois elementos ainda estão obscuros: o operador **##** presente dentro da chamada do utl_printf() e a macro `__VA_ARGS__`. 
 
-> ![NOTE]
+> [!NOTE]
 > :bulb: A função `utl_printf()` segue o mesmo formato da original `utl_printf()` sendo, no fundo, apenas uma implementação mais leve, sem alocação dinâmica e com menos recursos criada especificamente para sistemas embarcados. Uma vantagem adicional é poder testar usando o mesmo código de printf(): lembre-se de que a biblioteca C do PC não é igual à biblioteca C do STM32, normalmente reduzida (o CubeIDE usa a [newlib](https://sourceware.org/newlib/)). No texto, quando for mencionado `printf()`, o código se refere à função `utl_printf()`, a menos que seja explicitamente mencionado o contrário.
 
 ### Variadic Macros
