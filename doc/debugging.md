@@ -52,10 +52,10 @@ O segundo comentário é relacionado à proteção de inclusão quando o header 
 extern "C" void my_function(void);
 ```
 
-O símbolo `_cplusplus` é definido somente pelo compilador C++ e permite descobrir quando o código será compilado por um compilador C++, sendo usado para aplicar um `extern "C"` a todos os elementos do arquivo de inclusão (veja que existe um contexto `{}` que envolve todo o conteúdo do arquivo). O arquivo então fica como a seguir:
+O símbolo `__cplusplus` é definido somente pelo compilador C++ e permite descobrir quando o código será compilado por um compilador C++, sendo usado para aplicar um `extern "C"` a todos os elementos do arquivo de inclusão (veja que existe um contexto `{}` que envolve todo o conteúdo do arquivo). O arquivo então fica como a seguir:
 
 ```C copy
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" { // <- context begins here
 #endif
 

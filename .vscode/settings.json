@@ -1,6 +1,7 @@
 {
     "cSpell.language": "en,pt,pt-BR",
     "files.associations": {
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "stdlib.h": "c"
     }
 }
