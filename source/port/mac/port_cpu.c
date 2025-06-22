@@ -5,8 +5,9 @@
 #include <dispatch/dispatch.h>
 
 #include "hal.h"
+#include "app.h"
 
-extern char *main_get_app_name(void);
+extern char *main_app_name_get(void);
 
 static bool port_cpu_init_done = false;
 static pthread_mutex_t port_cpu_cs;
@@ -19,7 +20,7 @@ static volatile uint32_t port_systick_cnt = 0;
 static void port_cpu_sigint_handler(int sig_num)
 {
     UTL_DBG_PRINTF(UTL_DBG_MOD_PORT, "CTRL+C pressed!\n");
-    app_terminate();
+    app_terminate_set();
 }
 
 static void port_cpu_systick_handler_cbk(void *context)
@@ -35,9 +36,9 @@ static void port_systick_create(void)
     if(port_systick_timer)
     {
         dispatch_source_set_timer(port_systick_timer,
-                                  dispatch_time(DISPATCH_TIME_NOW,1*NSEC_PER_MSEC),
-                                  DISPATCH_TIME_FOREVER,
-                                  500 * NSEC_PER_SEC);
+                                  dispatch_time(DISPATCH_TIME_NOW,0),
+                                  1*NSEC_PER_MSEC, 
+                                  0);
 
         dispatch_source_set_event_handler_f(port_systick_timer, port_cpu_systick_handler_cbk);
         dispatch_set_context(port_systick_timer, port_systick_timer);
@@ -74,14 +75,14 @@ static void port_cpu_deinit(void)
 
 static void port_cpu_reset(void)
 {
-    UTL_DBG_PRINTF(UTL_DBG_MOD_PORT, "Resetting the CPU (5s)...\n");
-    char *app_name = main_get_app_name();
+    char *app_name = main_app_name_get();
     char *rst_cmd = malloc(strlen(app_name) + 32);
-    sprintf(rst_cmd, "sleep 5; %s &", app_name);
+    UTL_DBG_PRINTF(UTL_DBG_MOD_PORT, "Restarting app %s in 5s...\n", app_name);
+    sprintf(rst_cmd, "/bin/bash -c 'sleep 5; %s '", app_name);
     system(rst_cmd);
     free(rst_cmd);
     // app must terminate itself in 5 seconds, check app_terminate() function
-    app_terminate();
+    app_terminate_set();
 }
 
 static void port_cpu_watchdog_refresh(void)
@@ -103,6 +104,8 @@ static uint32_t port_cpu_random_seed_get(void)
         rnd_seed = (uint32_t)(tm) ^ ((uint32_t)(tm >> 32));
     else
         rnd_seed = (uint32_t)tm;
+
+    UTL_DBG_PRINTF(UTL_DBG_MOD_PORT, "Random seed: 0x%08X\n", rnd_seed);
 
     return rnd_seed;
 }

@@ -3,7 +3,7 @@
 
 static char *app_name = 0;
 
-char *main_get_app_name(void)
+char *main_app_name_get(void)
 {
     return app_name;
 }

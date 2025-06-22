@@ -29,6 +29,7 @@ extern "C"
 #define __UNUSED
 #endif
 
+#include "utl_printf.h"
 #include "utl_dbg.h"
 #include "hal_cpu.h"
 

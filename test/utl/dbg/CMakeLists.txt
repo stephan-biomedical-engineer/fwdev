@@ -7,14 +7,14 @@ set(SOURCES
     main.c
     ${CMAKE_SOURCE_DIR}/../../../source/utl/utl_dbg.c
     ${CMAKE_SOURCE_DIR}/../../../source/utl/printf/utl_printf.c
+    ${CMAKE_SOURCE_DIR}/../../../source/port/common/port_stdou.c
 )
 
 if(WIN32)
-    list(APPEND SOURCES ${CMAKE_SOURCE_DIR}/../../../source/port/common/port_stdout.c)
+
 elseif(APPLE)
-    list(APPEND SOURCES ${CMAKE_SOURCE_DIR}/../../../source/port/common/port_stdout.c)
+
 elseif(UNIX)
-    list(APPEND SOURCES ${CMAKE_SOURCE_DIR}/../../../source/port/common/port_stdout.c)
 endif()
 
 add_executable(app ${SOURCES})
