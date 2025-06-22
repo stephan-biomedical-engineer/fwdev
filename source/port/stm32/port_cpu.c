@@ -20,7 +20,7 @@ static void port_cpu_reset(void)
     NVIC_SystemReset();
 }
 
-void port_cpu_watchdog_refresh(void)
+static void port_cpu_watchdog_refresh(void)
 {
 #if HAL_WDG_ENABLED == 1
     LL_IWDG_ReloadCounter(IWDG);

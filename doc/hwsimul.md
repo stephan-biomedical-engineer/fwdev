@@ -81,7 +81,137 @@ Com isso em mente, a proposta é desenvolver um modelo de abstração inicial co
 
 https://github.com/marcelobarrosufu/fwdev/blob/08a71f1459560b3683de074d63580a8db6cab999/source/hal/hal_cpu.h#L1-L51
 
-Algumas explicações são importantes. Longe de serem apenas manias do autor, elas refletem anos de desenvolvimento e estudo, criando interfaces que funcionam, geram poucos erros e são fáceis de serem portadas e mantidas. 
+Algumas explicações são importantes. Longe de serem apenas manias do autor, elas refletem anos de desenvolvimento e estudo, criando interfaces que funcionam, geram poucos erros e são fáceis de serem portadas e mantidas.
+
+A estrutura `hal_cpu_dev_s` é o coração desse arquivo. Ela define um driver genérico para a CPU através de um conjunto de ponteiros de função:
+
+```C copy
+typedef struct hal_cpu_driver_s 
+ { 
+     void (*init)(void); 
+     void (*deinit)(void); 
+     void (*reset)(void); 
+     void (*watchdog_refresh)(void); 
+     void (*id_get)(uint8_t id[HAL_CPU_ID_SIZE]); 
+     uint32_t (*random_seed_get)(void); 
+     uint32_t (*critical_section_enter)(hal_cpu_cs_level_t level); 
+     void (*critical_section_leave)(uint32_t last_level); 
+     void (*low_power_enter)(void); 
+     void (*sleep_ms)(uint32_t tmr_ms); 
+     uint32_t (*time_get_ms)(void); 
+     uint32_t (*time_elapsed_get_ms)(uint32_t tmr_old_ms); 
+ } hal_cpu_driver_t; 
+ ```
+
+Cada função é um método que pode ser implementado de forma diferente, dependendo do porte desejado. Por exemplo, a função `hal_cpu_interrupt_disable()` pode ser implementada de forma diferente para um STM32F4, Linux ou Windows, mas a interface permanece a mesma. Veremos uma implementação dessa estrutura mais adiante.
+
+Ao final do arquivo, existem protótipos de funções relacionadas a essa estrutura, para facilitar o uso do driver no código. Por exemplo, como no trecho a seguir:
+
+```C copy
+void hal_cpu_init(void);
+void hal_cpu_deinit(void);
+void hal_cpu_reset(void);
+void hal_cpu_watchdog_refresh(void);
+void hal_cpu_id_get(uint8_t id[HAL_CPU_ID_SIZE]);
+````
+
+Essas funções são chamadas diretamente no código, sem a necessidade de acessar a estrutura `hal_cpu_driver_t` diretamente. Isso facilita o uso do driver e torna o código mais legível.
+
+Na abstração proposta, mais dois arquivos são importantes. O primeiro é o arquivo [hal.h](https://github.com/marcelobarrosufu/fwdev/blob/f2b6c7ec997e6cf6f05c5cb11786ed2dff5d01f7/source/hal/hal.h), que indica que deve existir, em algum lugar, uma implementação do driver da CPU. Isso pode ser visto através da seguinte linha, que é uma espécie "promessa" de implementação do driver pelo programador para o linker:
+
+```C copy
+extern hal_cpu_driver_t HAL_CPU_DRIVER;
+```
+
+O segundo arquivo é o [hal_cpu.c](https://github.com/marcelobarrosufu/fwdev/blob/f2b6c7ec997e6cf6f05c5cb11786ed2dff5d01f7/source/hal/hal_cpu.c). Esse arquivo é o ponto de entrada para as chamadas relacionadas à implementação do driver, usando a promessa feita. O início do arquivo é o seguinte:
+
+```C copy
+#include "hal.h"
+
+static hal_cpu_driver_t *drv = &HAL_CPU_DRIVER;
+
+void hal_cpu_init(void)
+{
+    drv->init();
+}
+
+void hal_cpu_deinit(void)
+{
+    drv->deinit();
+}
+
+void hal_cpu_reset(void)
+{
+    drv->reset();
+}
+
+void hal_cpu_watchdog_refresh(void)
+{
+    drv->watchdog_refresh();
+}
+
+void hal_cpu_id_get(uint8_t id[HAL_CPU_ID_SIZE])
+{
+    drv->id_get(id);
+}
+
+uint32_t hal_cpu_random_seed_get(void)
+{
+    return drv->random_seed_get();
+}
+
+// ...
+````
+
+Ele cria um ponteiro para a implementação do driver e faz o uso das funções disponibilizadas na estrutura `hal_cpu_driver_t`. Enquanto represente novamente um ponto onde se perde um pouco de desempenho, a abstração e portabilidade são favorecidas. Vale lembrar que, a depender do nível de otimização do compilador, essa perda pode ser quase nula.
+
+O que falta agora é criar a implementação do driver da CPU, que será feita de forma diferente para cada porte. O trecho a seguir mostra como isso poderia ser feito, para um microcontrolador STM32F4, por exemplo. A implementação não foi colocada completa aqui, mas você pode ver o exemplo completo no repositório do projeto, no arquivo [port_cpu.c](https://github.com/marcelobarrosufu/fwdev/blob/f2b6c7ec997e6cf6f05c5cb11786ed2dff5d01f7/source/port/stm32/port_cpu.c). Estamos também assumindo que o projeto foi criado pelo STM32CubeIDE usando os drivers de alto nível da ST (HAL).
+
+```C copy
+#include "main.h"
+#include "hal.h"
+
+extern RNG_HandleTypeDef hrng;
+
+static void port_cpu_init(void)
+{
+#if HAL_DEBUG_IN_SLEEP_MODE == 1
+	LL_DBGMCU_EnableDBGStopMode();
+	LL_DBGMCU_EnableDBGStandbyMode();
+#endif
+}
+
+static void port_cpu_deinit(void)
+{
+}
+
+static void port_cpu_reset(void)
+{
+    NVIC_SystemReset();
+}
+
+static void port_cpu_watchdog_refresh(void)
+{
+#if HAL_WDG_ENABLED == 1
+    LL_IWDG_ReloadCounter(IWDG);
+#endif
+}
+
+// more functions...
+
+hal_cpu_driver_t HAL_CPU_DRIVER =
+{
+    .init = port_cpu_init,
+    .deinit = port_cpu_deinit,
+    .reset = port_cpu_reset,
+    .watchdog_refresh = port_cpu_watchdog_refresh,
+    // more function pointer initializations ...
+};
+````
+
+Ao final do arquivo, existe finalmente a realização do driver, onde os ponteiro de função da estrutura `hal_cpu_driver_t` são preenchidos com as funções implementadas. Um cuidado adicional foi definir todas as funções como `static`, para que não sejam visíveis fora do arquivo, evitando possíveis conflitos de nomes com outras realizações dessa interface. Note que a inclusão do arquivo `main.h`, da ST, traz todas as definições necessárias para o funcionamento do driver, como a definição do `RNG_HandleTypeDef` e outras constantes, tornando esse arquivo totalmente dependente de plataforma, como esperado.
+
+Com isso, fica claro a forma básica de abstração de hardware que será usada daqui pra diante. No entanto, para alguns dispositivos que permitam múltiplas instâncias, como a porta serial, é necessário um pouco mais de trabalho, com o emprego da técnica de ponteiros opacos. Vamos ver como isso é feito a seguir. Ah, e se você ficou curioso com as funções relacionada a interrupção, recomendo ler a seção sobre [interrupções no Cortex M](./interrupts.md).
 
 ### Ponteiros opacos
 
