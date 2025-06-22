@@ -8,7 +8,8 @@ extern "C"
 #define XMACRO_DBG_MODULES \
     X(UTL_DBG_MOD_APP, 0)  \
     X(UTL_DBG_MOD_UART, 1) \
-    X(UTL_DBG_MOD_ADC, 2)
+    X(UTL_DBG_MOD_ADC, 2) \
+    X(UTL_DBG_MOD_PORT, 3)
 
     typedef enum utl_dbg_modules_e
     {

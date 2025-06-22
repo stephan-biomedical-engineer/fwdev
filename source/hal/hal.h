@@ -29,6 +29,7 @@ extern "C"
 #define __UNUSED
 #endif
 
+#include "utl_dbg.h"
 #include "hal_cpu.h"
 
 extern hal_cpu_driver_t HAL_CPU_DRIVER;
