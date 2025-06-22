@@ -73,12 +73,13 @@ Outros padrões de nomenclatura são recomendados:
 
 - **Nomes de arquivos**: devem ser escritos em letras minúsculas, com palavras separadas por underscore. Em especial importante para evitar problemas em sistemas de arquivos que diferenciam maiúsculas de minúsculas, como o Linux e MacOS.
 - **definições de macros**: devem ser escritas em letras maiúsculas, com palavras separadas por underscore.
-- **Nomes de funções**: devem ser escritas em letras minúsculas, com a parte inicial relacionada ao namespace, seguidas de um substantivo (opcional) e terminando com um verbo que indica a ação realizada. Por exemplo, `hal_gpio_set()`, `hal_cpu_interrupt_disable()`, `hal_cpu_watchdog_refresh()` e `hal_cpu_random_seed_get`. Isso ajuda a identificar rapidamente o que a função faz e qual o seu contexto, deixando o código mais legível e fácil de entender.
+- **Nomes de funções**: devem ser escritas em letras minúsculas, com a parte inicial relacionada ao namespace, seguidas de um substantivo (opcional) e terminando com um verbo que indica a ação realizada. Por exemplo, `hal_gpio_set()`, `hal_cpu_interrupt_disable()`, `hal_cpu_watchdog_refresh()` e `hal_cpu_random_seed_get()`. Isso ajuda a identificar rapidamente o que a função faz e qual o seu contexto, deixando o código mais legível e fácil de entender.
 
 ### Exemplo de abstração da CPU
 
 Com isso em mente, a proposta é desenvolver um modelo de abstração inicial com o mínimo necessário para operação. Você pode extender esse arquivo depois, com mais funcionalidades. Como exemplo, vamos criar uma abstração para a CPU do microcotrolador, com funções básicas de controle de interrupção, controle de watchdog, reset, entre outras operações comuns.
 
+https://github.com/marcelobarrosufu/fwdev/blob/08a71f1459560b3683de074d63580a8db6cab999/source/hal/hal_cpu.h#L1-L51
 
 Algumas explicações são importantes. Longe de serem apenas manias do autor, elas refletem anos de desenvolvimento e estudo, criando interfaces que funcionam, geram poucos erros e são fáceis de serem portadas e mantidas. 
 
