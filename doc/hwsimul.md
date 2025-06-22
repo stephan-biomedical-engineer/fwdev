@@ -20,15 +20,22 @@ Os fabricantes de microcontroladores costumam fornecer suas implementações (ou
 - **HAL** (High Level Hardware Abstration Layer): abstração de alto nível, com uso facilitado para o usuário e requerendo pouco conhecimento dos periféricos e registros da ST
 - **LL** (Low Level abstraction layer): abstração de nível mais baixo, normalmente com macros e funções que fazem uso direto de registros dos periféricos. Requer algum conhecimento dos periféricos da ST.
 
-Para quem está acostumado a usar o HAL da ST, sabe que basta incluir o arquivo de inclusão `main.h` para ter acesso a todos os periféricos e funções da biblioteca. Infelizmente, essa inclusão irá condenar o seu projeto a uma eterna dependência do HAL da ST. Se pretende validar antes no PC ou ter um código mais portável entre fabricantes, é determinante criar o seu nível abstração, sem qualquer dependência de registros ou periféricos específicos. Sim, dá um pouco de trabalho, perde-se um pouco de desempenho, mas pode reduzir o tempo de desenvolvimento/custo final.
+Para quem está acostumado a usar o HAL da ST, sabe que basta incluir o arquivo de inclusão `main.h` para ter acesso a todos os periféricos e funções da biblioteca. Infelizmente, essa inclusão irá condenar o seu projeto a uma eterna dependência do HAL da ST. Se pretende validar seu código antes no PC ou ter um projeto mais portável entre fabricantes, é determinante criar o seu nível abstração, sem qualquer dependência de registros ou periféricos específicos. Sim, dá um pouco de trabalho, perde-se um pouco de desempenho, mas pode reduzir o tempo de desenvolvimento (ou custo) final.
 
-Como exemplo, vamos criar a seguir uma abstração para a porta serial do microcontrolador, seguindo bons padrões de projeto e evitando qualquer dependência de hardware. Alguns pontos devem ser considerados nesse processo:
+Como exemplo, vamos criar a seguir algumas abstrações de hardware para um microcontrolador, seguindo bons padrões de projeto e evitando qualquer dependência de hardware. A partir desses exemplos e suas implementações para diversos sistemas operacionais, será mais fácil criar outras.
 
-- podemos ter várias portas seriais diferentes
-- todo o processo de configuração precisa ser replicado na sua interface, sem depender de qualquer pré-definição fornecida pelo fabricante
-- vamos evitar o uso de alocação dinâmica sempre que possível
+Alguns pontos releventes devem ser considerados nesse processo de abstração:
 
-A implementação diretamente para o processador acaba sendo até mesmo mais simples do que a implementação para o PC. No PC, a menos que se escreva um código todo em pooling, pode ser necessário lidar com threads, mutexes e outras estruturas de sincronização. 
+- Podemos ter várias instâncias de um mesmo hardware. Por exemplo, mais de uma porta serial ou SPI.
+- Todo o processo de configuração precisa ser replicado na sua interface, sem depender de qualquer pré-definição fornecida pelo fabricante. 
+- Como simular o comportamento de um periférico pode mudar significativamente. Por exemplo, uma memória flash pode ser simulada como um arquivo. Já um pino de IO pode ser um pouco mais complexo, principalmente se pretende simular alterações nas entradas desses pinos. Seu programa poderia ler comandos do console para setar um pino ou poderia ter um endpoint com uma biblioteca como ZeroMQ capaz de receber comandos remotos via rede. Um pouco de criatividade pode ajudar.
+- Algumas interfaces serão feitas com a técnica de ponteiros opacos, explicada posteriormente nessa seção. Isso é importante para uma separação completa entre definição e implementação.
+- As chamadas das funções de um determinado módulo serão apresentadas como drivers, através de uma estrutura de ponteiros de função. Isso permite acoplar dinamicamente o driver desejado, dando suporte para revisões diferentes ou implementações personalizadas.
+- Vamos evitar o uso de alocação dinâmica sempre que possível.
+
+Como vai ser notado, a\ implementação diretamente para o microcontrolador acaba sendo até mesmo mais simples do que a implementação para o PC. No PC, a menos que se escreva um código todo em pooling, pode ser necessário lidar com threads, mutexes e outras estruturas de sincronização, além de arquivos e bibliotecas adicionais, a depender da sua escolha de implementação. 
+
+### Abstração da CPU
 
 Com isso em mente, a proposta é desenvolver uma abstração inicial com o mínimo necessário para operação. Você pode extender esse arquivo depois, com mais funcionalidades. Por exemplo, pode adicionar callbacks para recepção por interrupção ou mesmo DMA, callbacks para indicação de fim de transmissão, etc. O arquivo de inclusão está a seguir, denominado de `hal_uart.h`. As explicações serão dadas posteriormente.
 
