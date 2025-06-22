@@ -18,7 +18,11 @@ int main(int argc, char *argv[])
     
     while(true)
     {
+        // protect against from any other running threads and 
+        // simulates a better behavior of code running from main (non interrupt context)
+        uint32_t state = hal_cpu_critical_section_enter(HAL_CPU_CS_USER_LEVEL);
         bool run = app_loop();
+        hal_cpu_critical_section_leave(state);
 
         if(run == false)
             break;
