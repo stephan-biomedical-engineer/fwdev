@@ -31,6 +31,44 @@ Vale a pena deixar aqui uma observação: esse módulo vai fazer uso de funçõe
 
 Vamos aproveitar também para aprender um pouco mais sobre recursos avançados do pré-processador da linguagem C, como o operador **#** que transforma tokens em strings (_stringification_), o operador **##** de concatenação de tokens (_token pasting_) e a técnica **X macro**. Esses recursos são muito úteis para criar um código mais limpo e fácil de manter.
 
+## Padronização de arquivos de inclusão
+
+Dois comentários antes de iniciar: o primeiro é relacionado ao ```#pragma once```, diretiva para evitar inclusões recursivas. Apesar de ser amplamente suportada por quase todos os compiladores, não é algo padrão. Se prefere algo totalmente ANSI-C, recomenda-se usar algo como:
+
+```C copy
+#ifndef __HAL_DBG_H__
+#define  __HAL_DBG_H__
+
+// file contents
+
+#endif /**  __HAL_DBG_H__ /**
+```
+
+Note que a definição foi criada com base no nome do arquivo, sendo uma prática comum deixar tudo em maiúsculas e colocar dois underscores no início e no fim.
+
+O segundo comentário é relacionado à proteção de inclusão quando o header é usado por arquivos que serão compilados por um compilador C++. O `extern "C"` é uma forma de garantir que o código gerado por esse compilador seja compatível com um código gerado por um compilador C. Se você deseja que um símbolo seja exportado como C, mesmo quando compilado por um compilador C++, é necessário prefixar em esse símbolo com `extern "C"`. Assim, uma declaração de função deveria ser feita como a seguir:
+
+```C copy
+extern "C" void my_function(void);
+```
+
+O símbolo `_cplusplus` é definido somente pelo compilador C++ e permite descobrir quando o código será compilado por um compilador C++, sendo usado para aplicar um `extern "C"` a todos os elementos do arquivo de inclusão (veja que existe um contexto `{}` que envolve todo o conteúdo do arquivo). O arquivo então fica como a seguir:
+
+```C copy
+#ifdef _cplusplus
+extern "C" { // <- context begins here
+#endif
+
+// file contents, exported as C for further decoration
+
+#ifdef __cplusplus
+} // <- context ends here
+#endif
+```
+
+Tudo isso tem relação com o problemas de decoração de nomes, conhecido como _name mangling_, que é a forma como um compilador gera nomes únicos para funções, classes e variáveis, evitando conflitos. Infelizmente, existe diferenças no padrão usado pelos compiladores C e C++, o que resultaria num erro de linkedição.  Recomenda-se uma leitura sobre [C++ name mangling](https://en.wikipedia.org/wiki/Name_mangling) para entender melhor o que é e como funciona.
+
+
 ### X macros
 
 O arquivo `utl_log.h` é apresentado a seguir, inteiro. Ele será explicado a seguir.

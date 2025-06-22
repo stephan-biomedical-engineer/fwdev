@@ -17,14 +17,14 @@ Enquanto isso possa realmente justificar alguns casos de desenvolvimento, a boa 
 
 Os fabricantes de microcontroladores costumam fornecer suas implementações (ou drivers) para os periféricos disponíveis no chip. Especialmente para microcontroladores baseados em núcleos de processamento Cortex M, a arquitetura de software conta com pelo menos dois níveis de abstração. A primeira é a abstração do núcleo de processamento, fornecida pela ARM e conhecida como CMSIS (Common Microcontroller Software Interface Standard). Sobre essa abstração é comum o fabricante que emprega núcleos ARM escrever a sua biblioteca de drivers. No nosso caso principal, com ferramentas da ST, é possível usar a camada de abstração de hardware da ST, comumente fornecida em dois níveis diferentes:
 
-- **HAL** (High Level Hardware Abstration Layer): abstração de alto nível, com uso facilitado para o usuário e requerendo pouco conhecimento dos periféricos e registros da ST
+- **HAL** (High Level Hardware Abstraction Layer): abstração de alto nível, com uso facilitado para o usuário e requerendo pouco conhecimento dos periféricos e registros da ST
 - **LL** (Low Level abstraction layer): abstração de nível mais baixo, normalmente com macros e funções que fazem uso direto de registros dos periféricos. Requer algum conhecimento dos periféricos da ST.
 
 Para quem está acostumado a usar o HAL da ST, sabe que basta incluir o arquivo de inclusão `main.h` para ter acesso a todos os periféricos e funções da biblioteca. Infelizmente, essa inclusão irá condenar o seu projeto a uma eterna dependência do HAL da ST. Se pretende validar seu código antes no PC ou ter um projeto mais portável entre fabricantes, é determinante criar o seu nível abstração, sem qualquer dependência de registros ou periféricos específicos. Sim, dá um pouco de trabalho, perde-se um pouco de desempenho, mas pode reduzir o tempo de desenvolvimento (ou custo) final.
 
 Como exemplo, vamos criar a seguir algumas abstrações de hardware para um microcontrolador, seguindo bons padrões de projeto e evitando qualquer dependência de hardware. A partir desses exemplos e suas implementações para diversos sistemas operacionais, será mais fácil criar outras.
 
-Alguns pontos releventes devem ser considerados nesse processo de abstração:
+Alguns pontos relevantes devem ser considerados nesse processo de abstração:
 
 - Podemos ter várias instâncias de um mesmo hardware. Por exemplo, mais de uma porta serial ou SPI.
 - Todo o processo de configuração precisa ser replicado na sua interface, sem depender de qualquer pré-definição fornecida pelo fabricante. 
@@ -33,56 +33,54 @@ Alguns pontos releventes devem ser considerados nesse processo de abstração:
 - As chamadas das funções de um determinado módulo serão apresentadas como drivers, através de uma estrutura de ponteiros de função. Isso permite acoplar dinamicamente o driver desejado, dando suporte para revisões diferentes ou implementações personalizadas.
 - Vamos evitar o uso de alocação dinâmica sempre que possível.
 
-Como vai ser notado, a\ implementação diretamente para o microcontrolador acaba sendo até mesmo mais simples do que a implementação para o PC. No PC, a menos que se escreva um código todo em pooling, pode ser necessário lidar com threads, mutexes e outras estruturas de sincronização, além de arquivos e bibliotecas adicionais, a depender da sua escolha de implementação. 
+Como vai ser notado, a implementação diretamente para o microcontrolador acaba sendo até mesmo mais simples do que a implementação para o PC. No PC, a menos que se escreva um código todo em pooling, pode ser necessário lidar com threads, mutexes e outras estruturas de sincronização, além de arquivos e bibliotecas adicionais, a depender da sua escolha de implementação. 
 
-### Abstração da CPU
-
-Com isso em mente, a proposta é desenvolver uma abstração inicial com o mínimo necessário para operação. Você pode extender esse arquivo depois, com mais funcionalidades. Por exemplo, pode adicionar callbacks para recepção por interrupção ou mesmo DMA, callbacks para indicação de fim de transmissão, etc. O arquivo de inclusão está a seguir, denominado de `hal_uart.h`. As explicações serão dadas posteriormente.
-
-https://github.com/marcelobarrosufu/fwdev/blob/b156bcffe07d7005796ca77682ff5ff5acee0ab9/source/port/hal_uart.h#L1-L38
-
-Algumas explicações são importantes. Longe de serem apenas manias do autor, elas refletem anos de desenvolvimento e estudo, criando interfaces que funcionam, geram poucos erros e são fáceis de serem portadas e mantidas. 
+A seguir iremos tratar de dois pontos importantes: a utilização de uma espécie de _namespacing_ para evitar conflitos de nomes e a estrutura básica de abstração de hardware, com o uso de driver genéricos e ponteiros opacos.
 
 ### Namespaces
 
-Quem trabalha com linguagens mais modernos do que o C está acostumado com o conceito de _namespacing_. A idéia é encapsular, aninhando definições em módulos relacionados, evitando conflitos. Infelizmente, esse conceito não existe em C. Uma forma de tentar imitar o comportamento do namespacing é forçar uma rígida estratégia de nomeação de arquivos e definições, empregando o underscore como separador (o "_"), na notação conhecida como "snake case". Sim, muitos desenvolvedores preferem a lógica do "pascal case", onde se omite o underscore e usa-se a primeira letra de cada palavra em maiúscula e o resto em minúsculas. O autor considera o a forma snake case mais legível, dando a impressão de um espaço entre palavras e facilitando a leitura. Caso prefira outra, não tem problema: o importante é ter uma notação comum para todos os desenvolvedores do seu time.
+Quem trabalha com linguagens mais modernos do que a linguagem C está acostumado com o conceito de _namespacing_. A idéia é encapsular, aninhando definições em módulos relacionados, evitando conflitos de nomes ou definições. Infelizmente, esse conceito não existe em C. Uma forma de tentar imitar o comportamento do namespacing é forçar uma rígida estratégia de nomeação de arquivos e definições, empregando o underscore como separador (o "_"), na notação conhecida como "snake case". Sim, muitos desenvolvedores preferem a lógica do "pascal case", onde se omite o underscore e usa-se a primeira letra de cada palavra em maiúscula e o resto em minúsculas. O autor considera a forma snake case mais legível, dando a impressão de um espaço entre palavras e facilitando a leitura. Caso prefira outra, não tem problema: o importante é ter uma notação comum para todos os desenvolvedores do seu time.
 
-No arquivo apresentado, foram criados três níveis de hierarquia: **hal** para indicar que é um arquivo de interface de hardware, **uart** que é uma abreviação para porta serial e depois funções ou definições relacionadas com a porta serial, como **open**. O nome final, **hal_uart_open()** permite reduzir conflitos com várias outras partes do código, como uma possível função de open de um adc (**hal_adc_open()**) ou outras funções **open** sem relacionamento algum com hardware. Confie em mim, é uma excelente prática.
-
-Além disso, algumas notações relacionadas a sufixos são recorrentes:
-
-- **_e**: para enumerações
-- **_t**: para tipos definidos
-- **_s**: para estruturas
-
-Além de evitar conflitos de nomes, dão visibilidade imediata ao tipo de dado utilizado. E, antes que pergunte, eu não incentivo o uso de notação Húngara. Prefiro padronizar tudo com `stdint.h`, `stdbool.h` e `stddef.h`.
-
-Dois comentários finais: o primeiro é relacionado ao ```#pragma once```, diretiva para evitar inclusões recursivas. Apesar de ser amplamente suportada por quase todos os compiladores, não é algo padrão. Se prefere algo totalmente ANSI-C, recomendo usar algo como:
+Veja um exemplo de uso do conceito de _namespacing_ em C, onde o nome do arquivo e as definições são baseadas no nome do hardware e na função que está sendo implementada:
 
 ```C copy
-#ifndef __HAL_UART_H__
-#define  __HAL_UART_H__
+#pragma once
 
-// file contents
+typedef enum hal_gpio_pin_e
+{
+	HAL_GPIO_PIN_0 = 0,
+	HAL_GPIO_PIN_1,
+	HAL_GPIO_PIN_2,
+    HAL_GPIO_MAX_PINS,
+} hal_gpio_pin_t;
 
-#endif /**  __HAL_UART_H__ /**
+void hal_gpio_set(hal_gpio_pin_t pin, bool state);
+bool hal_gpio_get(hal_gpio_pin_t pin);
+void hal_gpio_toggle(hal_gpio_pin_t pin);
 ```
 
-Note que a definição foi criada com base no nome do arquivo, apenas deixando tudo em maiúsculas e colocando underscores no início e no fim.
+No arquivo apresentado, foram criados três níveis de hierarquia: `hal` para indicar que é um arquivo de interface de hardware, `gpio` que é uma abreviação para _general purpose input/output_ e depois funções ou definições relacionadas com pinos de I/O, como `set`, `get` e como `toggle`. O nome final, por exemplo `hal_gpio_set()` permite reduzir conflitos com várias outras partes do código e de forma hierárquica. Num primeiro nível, isola tudo que não tem relação com o hal proposto. Em um segundo nível, impede que uma possível função `open` de um adc (`hal_adc_open()`) colida com a do GPIO. Confie em mim: apesar de um pouco pedante, é uma excelente prática. 
 
-O segundo comentário é relacionado a proteção de inclusão quando o header é usado por arquivos escritos em C++. O ```extern "C"``` é uma forma de garantir que o código seja compilado como C, evitando problemas de decoração de nomes.
+Além disso, algumas notações relacionadas a sufixos são também recomendadas para facilitar a identificação do tipo de dado utilizado. Por exemplo, sufixos comuns são:
 
-```C copy
-#ifdef _cplusplus
-extern "C" {
-#endif
+- `_e`: para enumerações
+- `_t`: para tipos definidos
+- `_s`: para estruturas
 
-// file contents, exported as C for further decoration
+Além de evitar conflitos de nomes, dão visibilidade imediata ao tipo de dado utilizado. E, antes que pergunte, não estamos incentivando o uso de [notação Húngara](https://en.wikipedia.org/wiki/Hungarian_notation). Entendemos que é preferível padronizar tudo com o que já se tem na própria linguagem via `stdint.h`, `stdbool.h` e `stddef.h`.
 
-#ifdef __cplusplus
-}
-#endif
-```
+Outros padrões de nomenclatura são recomendados:
+
+- **Nomes de arquivos**: devem ser escritos em letras minúsculas, com palavras separadas por underscore. Em especial importante para evitar problemas em sistemas de arquivos que diferenciam maiúsculas de minúsculas, como o Linux e MacOS.
+- **definições de macros**: devem ser escritas em letras maiúsculas, com palavras separadas por underscore.
+- **Nomes de funções**: devem ser escritas em letras minúsculas, com a parte inicial relacionada ao namespace, seguidas de um substantivo (opcional) e terminando com um verbo que indica a ação realizada. Por exemplo, `hal_gpio_set()`, `hal_cpu_interrupt_disable()`, `hal_cpu_watchdog_refresh()` e `hal_cpu_random_seed_get`. Isso ajuda a identificar rapidamente o que a função faz e qual o seu contexto, deixando o código mais legível e fácil de entender.
+
+### Exemplo de abstração da CPU
+
+Com isso em mente, a proposta é desenvolver um modelo de abstração inicial com o mínimo necessário para operação. Você pode extender esse arquivo depois, com mais funcionalidades. Como exemplo, vamos criar uma abstração para a CPU do microcotrolador, com funções básicas de controle de interrupção, controle de watchdog, reset, entre outras operações comuns.
+
+
+Algumas explicações são importantes. Longe de serem apenas manias do autor, elas refletem anos de desenvolvimento e estudo, criando interfaces que funcionam, geram poucos erros e são fáceis de serem portadas e mantidas. 
 
 ### Ponteiros opacos
 
@@ -167,3 +165,9 @@ Uma vez que seu código roda no PC, existem diversas ferramentas que estão à s
 ## Wraping up
 
 Apesar de requerer um trabalho adicional, os ganhos ao criar abstrações genéricas e portáveis são enormes. E, uma vez desenvolvidas, podem ser reusadas em outros projetos. Considere isso ao iniciar um novo trabalho !
+
+<!-- Por exemplo, pode adicionar callbacks para recepção por interrupção ou mesmo DMA, callbacks para indicação de fim de transmissão, etc. O arquivo de inclusão está a seguir, denominado de `hal_uart.h`. As explicações serão dadas posteriormente.
+
+https://github.com/marcelobarrosufu/fwdev/blob/b156bcffe07d7005796ca77682ff5ff5acee0ab9/source/port/hal_uart.h#L1-L38
+
+-->
