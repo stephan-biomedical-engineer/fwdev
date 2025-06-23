@@ -21,3 +21,6 @@
 3. Compile e execute o exemplo do hal_dbg, para validar que tudo está operacional.
 4. Crie um novo projeto no STM32CubeIDE, utilizando o STM32F411RE como microcontrolador. Configure o projeto para que ele consiga utilizar o hal_dbg. Num primeiro momento, redirecione a saída para o ITM.
 
+# TODO
+
+- criar cmakes para compilar partes, como hal e utl, ao inves de um cmake so
