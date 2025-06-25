@@ -56,22 +56,20 @@ Vamos apresentar as interrupções seguindo os vetores de interrupção. A prime
 
 As interrupções no Cortex M4 podem ser divididas em dois grandes grupos: as mascaráveis e as não mascaráveis. Interrupções mascaráveis são aquelas que podem ser temporariamente desabilitadas ou postergadas por mecanismos internos do processador ou por software, como o uso dos registradores PRIMASK, BASEPRI ou FAULTMASK. Por outro lado, interrupções não mascaráveis são sempre executadas quando ocorrem, não podendo ser inibidas por esses mecanismos.
 
-As exceções não mascaráveis no Cortex M4 incluem a exceção de Reset, a NMI (Non-Maskable Interrupt) e o HardFault. Essas exceções são utilizadas para eventos críticos e não podem ser desabilitadas por nenhum mecanismo de mascaramento como PRIMASK, BASEPRI ou FAULTMASK (vistos mais adiante). A ordem de prioridade e atendimento dessas exceções é fixa e determinada pela arquitetura: o Reset possui a prioridade mais alta, seguido pela NMI e, por fim, o HardFault. Na tabela, elas são indicadas por prioridades negativas, -3, -2 e -1. No fundo, é apenas uma forma de indicar que são maais prioritárias do que a maior prioridade configurável, que é a prioridade 0, não existe de fato uma prioridade negativa.
+As exceções não mascaráveis no Cortex M4 incluem a exceção de Reset, a NMI (Non-Maskable Interrupt) e o HardFault. Essas exceções são utilizadas para eventos críticos e não podem ser desabilitadas por nenhum mecanismo de mascaramento como PRIMASK, BASEPRI ou FAULTMASK (vistos mais adiante). A ordem de prioridade e atendimento dessas exceções é fixa e determinada pela arquitetura: o Reset possui a prioridade mais alta, seguido pela NMI e, por fim, o HardFault. Na tabela, elas são indicadas por prioridades negativas, -3, -2 e -1. No fundo, é apenas uma forma de indicar que são mais prioritárias do que a maior prioridade configurável, que é a prioridade 0, não existe de fato uma prioridade negativa.
 
 ## Relação entre HardFault, Bus Fault, MemManage Fault e Usage Fault
 
 > [!NOTE]
 > :robot:
 
-O Cortex M4 conta com quatro exceções principais para tratamento de falhas de execução: o *HardFault*, o *Bus Fault*, o *MemManage Fault* e o *Usage Fault*. Embora possam parecer similares à primeira vista, elas possuem propósitos distintos e níveis de criticidade diferentes.
+O Cortex M4 conta com quatro exceções principais para tratamento de falhas de execução: *HardFault*, *Bus Fault*, *MemManage Fault* e  *Usage Fault*. Embora possam parecer similares à primeira vista, elas possuem propósitos distintos e níveis de criticidade diferentes.
 
-O *MemManage Fault* está relacionado a violações de acesso à memória protegida, como acesso a regiões não permitidas pelo controle de memória (MPU - Memory Protection Unit). O *Bus Fault* está ligado a falhas de acesso ao barramento, como acessos inválidos ou erros em periféricos. Já o *Usage Fault* trata erros de uso da CPU, como execução de instruções inválidas, divisão por zero e violação de alinhamento. Essas três exceções podem ser habilitadas ou desabilitadas individualmente por meio de bits de controle no registrador `SCB->SHCSR` (_System Handler Control and State Register_).
-
-Quando essas exceções estão desabilitadas e um erro correspondente ocorre, a falha não deixa de ser tratada: ela é automaticamente redirecionada ao manipulador de *HardFault*. Isso ocorre porque o *HardFault* atua como um “guarda-chuva” para qualquer exceção crítica não tratada diretamente. Por esse motivo, o *HardFault* não pode ser desabilitado — ele assegura que falhas graves não passem despercebidas, mesmo quando outros mecanismos de exceção estão inativos.
+O *MemManage Fault* está relacionado a violações de acesso à memória protegida, como acesso a regiões não permitidas pelo controle de memória (MPU - Memory Protection Unit). O *Bus Fault* está ligado a falhas de acesso ao barramento, como acessos inválidos ou erros em periféricos. Já o *Usage Fault* trata erros de uso da CPU, como execução de instruções inválidas, divisão por zero e violação de alinhamento. Essas três exceções podem ser habilitadas ou desabilitadas individualmente por meio de bits de controle no registrador `SCB->SHCSR` (_System Handler Control and State Register_). Quando essas exceções estão desabilitadas e um erro correspondente ocorre, a falha não deixa de ser tratada: ela é automaticamente redirecionada ao manipulador de *HardFault*. Isso ocorre porque o *HardFault* atua como um “guarda-chuva” para qualquer exceção crítica não tratada diretamente. Por esse motivo, o *HardFault* não pode ser desabilitado — ele assegura que falhas graves não passem despercebidas, mesmo quando outros mecanismos de exceção estão inativos.
 
 Essa hierarquia de tratamento oferece uma abordagem robusta e flexível, permitindo que desenvolvedores configurem o comportamento do sistema conforme as necessidades específicas de desenvolvimento ou produção, enquanto mantêm um nível mínimo de proteção contra falhas críticas.
 
-## Uso de CMSIS para Controle de Interrupções
+## Uso do CMSIS para Controle de Interrupções
 
 > [!NOTE]
 > :robot: :brain:
@@ -107,14 +105,14 @@ typedef enum
 ```
  Esses identificadores são utilizados como argumentos nas chamadas de funções do CMSIS, como `NVIC_SetPriority()` e `NVIC_EnableIRQ()`, para selecionar a interrupção desejada de maneira abstrata e portável. Cada valor dessa enumeração corresponde a uma posição na tabela de vetores de interrupção.
 
-Apenas como curiosidade, veja a implementação da função `NVIC_SetPriority()` do CMSIS para o Cortex M4, evidenciando o tratamento para as definições com valores negativos.
+Como referência, veja a implementação da função `NVIC_SetPriority()` do CMSIS para o Cortex M4, evidenciando o tratamento para as definições com valores negativos.
 
 ```C copy
 __STATIC_INLINE void __NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority)
 {
   if ((int32_t)(IRQn) >= 0)
   {
-    NVIC->IP[((uint32_t)IRQn)]               = (uint8_t)((priority << (8U - __NVIC_PRIO_BITS)) & (uint32_t)0xFFUL);
+    NVIC->IP[((uint32_t)IRQn)]= (uint8_t)((priority << (8U - __NVIC_PRIO_BITS)) & (uint32_t)0xFFUL);
   }
   else
   {
@@ -123,7 +121,9 @@ __STATIC_INLINE void __NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority)
 }
 ```
 
-Percebam que existe um shift da prioridade antes de se fazer a atribuição no registro. Esse ponto merece uma explicação.
+Percebam que existe um shift da prioridade antes de se fazer a atribuição no registro. Esse ponto merece uma explicação e está relacionado ao fato de as interrupções em Cortex M3, M4 e M7 possuírem a divisão de prioridades em grupos e subgrupos. 
+
+O número de bits utilizados para a prioridade é definido pelo parâmetro `__NVIC_PRIO_BITS`, que é configurável no CMSIS e dependente do processador utilizado. Por exemplo, se `__NVIC_PRIO_BITS` for 4, as prioridades vão de 0 a 15, onde 0 é a prioridade mais alta e 15 é a mais baixa. O shift é necessário para alinhar os bits da prioridade corretamente no registro de interrupção.
 
 
 
