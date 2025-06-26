@@ -123,12 +123,120 @@ __STATIC_INLINE void __NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority)
 
 Percebam que existe um shift da prioridade antes de se fazer a atribuição no registro. Esse ponto merece uma explicação e está relacionado ao fato de as interrupções em Cortex M3, M4 e M7 possuírem a divisão de prioridades em grupos e subgrupos. 
 
-O número de bits utilizados para a prioridade é definido pelo parâmetro `__NVIC_PRIO_BITS`, que é configurável no CMSIS e dependente do processador utilizado. Por exemplo, se `__NVIC_PRIO_BITS` for 4, as prioridades vão de 0 a 15, onde 0 é a prioridade mais alta e 15 é a mais baixa. O shift é necessário para alinhar os bits da prioridade corretamente no registro de interrupção.
+O número de bits utilizados para a prioridade é definido pelo parâmetro `__NVIC_PRIO_BITS`, que é configurável no CMSIS e dependente do processador utilizado. Por exemplo, se `__NVIC_PRIO_BITS` for 4, as prioridades vão de 0 a 15, onde 0 é a prioridade mais alta e 15 é a mais baixa. 
+
+É possível ainda dividir esses 4 bits em grupo e subgrupo, alocando uma quantidade de bits para cada parte. Por exemplo, se tivermos 2 bits para o grupo e 2 bits para o subgrupo, a prioridade total será representada por 4 bits, mas composta de 4 grupos e cada grupo com 4 com possibilidades de prioridade de subgrupo. A quantidade de bits alocados para cada grupo e subgrupo é configurável no registro `AIRCR` (_Application Interrupt and Reset Control Register_) do SCB (_System Control Block_), `SCB→AIRCR[10:8]`. No fundo, isso não altera a quantidade de prioridades, mas apenas a forma como elas são organizadas, podendo ser útil para organizar as interrupções de forma hierárquica.
+
+Para finalizar, como a configuração da prioridade usa apenas alguns bits, pensando num campo de 8 bits, existem bits não usados. Por exemplo, se temos 4 bits para codificar a prioridade, os outros 4 bits não são usados. Os bits usados ficam na parte mais significativa e os não usados na parte menos significativa, sendo que a ARM decidiu que esses bits não usados devem ser representados com zeros. Assim, uma configuração de prioridade 10 (0x0A ou 00001010b, em binário) sem subgrupos, seria vista como:
+
+```
+PRIO = 0x0A << 4 | 0x00
+PRIO = 10100000b = 0xA0
+```
+
+Usando 1 bit para grupo e 3 bits para subgrupo, a configuração de prioridade 1 para grupo e 2 para subgrupo seria vista como:
+
+```
+PRIO = (0x01 << 3 | 0x02) << 4 | 0x00
+PRIO = 10100000b = 0xA0
+```
+
+No fundo, a prioridade final é a mesma nos dois casos (0xA0) e o CMSIS faz esse ajuste automaticamente ao atribuir a prioridade ao registro de interrupção, lendo a configuração do `AIRCR` e aplicando o shift necessário.
+
+## Habilitando e Desabilitando Interrupções de Forma Global
+
+O Cortex-M3/M4 oferece dois registradores especiais para controlar interrupções globalmente, de forma rápida e eficiente, sem depender do NVIC, através dos registradores PRIMASK e FAULTMASK. Apesar de serem de 32 bits, apenas o bit 0 é utilizado, sendo que o restante é reservado e deve ser mantido em zero. Esses registradores são úteis para desabilitar todas as interrupções mascaráveis de uma só vez, sem precisar configurar cada uma individualmente.
+
+O PRIMASK	pode desabilitar todas as interrupções mascaráveis, ou seja, NMI e HardFault não são afetadas. Seria algo equivalente a desabilitar todas as interrupções maiores ou iguais a zero (lembre-se que existem os níveis simbólicos negativos, de -3 a -1).
+
+As funções CMSIS para manipular o PRIMASK são:
+
+```c copy
+__disable_irq();  // Usa a instrução CPSID I
+__enable_irq();   // Usa a instrução CPSIE I
+// ou
+void __set_PRIMASK(uint32_t priMask); // Usa a instrução MSR PRIMASK
+uint32_t __get_PRIMASK(void); // Usa a instrução MRS PRIMASK
+````
+
+O registrador FAULTMASK atua de forma similar ao PRIMASK, mas com escopo ainda mais restritivo. Quando FAULTMASK = 1, o processador desabilita todas as interrupções mascaráveis, inclusive a exceção HardFault. Seria algo equivalente a  desabilitar todas as interrupções maiores ou iguais -1, ode somente NMI (Non-Maskable Interrupt) permanece habilitada. Além disso, o FAULTMASK só pode ser ativado dentro de uma interrupção (mas que não pode ser nem NMI nem Fault handler) e é automaticamente resetado ao retornar da interrupção. Isso gera cenários muitos específicos de uso desse recursos, como por exemplo:
+
+- o FAULTMASK pode ser usado por tratadores de exceção configuráveis (como BusFault, MemManage e UsageFault) quando desejam garantir exclusividade total para tratar uma falha.  Isso garante que, enquanto o FAULTMASK estiver ativo, nenhuma outra interrupção mascarável será atendida, incluindo a HardFault, permitindo ignorar falhas de barramento ou proteções de área de memória, por exemplo, dentro de um tratador de falha de hardware como UsageFault.
+- um outro caso de uso peculiar é forçar a execução de uma interrupção de maior prioridade apenas após o término da interrupção corrente, mesmo que esta última tenha prioridade inferior. Isso é possível porque o FAULTMASK é automaticamente limpo (setado para 0) ao sair de um handler de exceção (exceto NMI). Assim, a interrupção pendente só será atendida após o FAULTMASK ser automaticamente limpo, ao sair do handler.
+
+As funções CMSIS para manipular o FAULTMASK são:
+
+```c copy
+void __enable_fault_irq(void); // Usa a instrução CPSIE F
+void __disable_fault_irq(void); // Usa a instrução CPSID F
+// ou
+void __set_FAULTMASK(uint32_t faultMask); // Usa a instrução MSR FAULTMASK
+uint32_t __get_FAULTMASK(void); // Usa a instrução MRS FAULTMASK
+```
+
+E um exemplo de uso do FAULTMASK para forçar a execução de uma interrupção de maior prioridade após o término da interrupção corrente, poderia ser:
+
+```C copy
+__set_FAULTMASK(1);
+NVIC_SetPendingIRQ(HigherIRQn);
+// Handler atual continua...
+//
+// Ao retornar, FAULTMASK é limpo e HigherIRQn é atendida
+```
 
 
+## Cuidados no Uso de `__disable_irq()` e `__enable_irq()`
 
+> [!NOTE]
+> :robot:
 
+As funções `__disable_irq()` e `__enable_irq()` são frequentemente utilizadas aos pares para proteger **regiões críticas**, isto é, trechos de código que acessam recursos compartilhados e que não devem ser interrompidos durante sua execução. Um uso típico seria:
 
+```c copy
+__disable_irq();
+// Região crítica
+__enable_irq();
+```
 
+No entanto, o uso ingênuo dessas funções pode introduzir um erro sutil quando chamadas aninhadas de `__disable_irq()` e `__enable_irq()` ocorrem. Suponha o seguinte cenário:
+
+```c copy
+void rotina_interna(void) {
+    __disable_irq();
+    // Operações internas
+    __enable_irq(); // reabilita interrupções
+}
+
+void rotina_externa(void) {
+    __disable_irq();
+    rotina_interna(); 
+    // interrupções são reabilitadas prematuramente
+    // Região crítica sem proteção
+    __enable_irq();
+}
+```
+
+No exemplo acima, a chamada `__enable_irq()` dentro da função `rotina_interna()` reabilita as interrupções enquanto a função `rotina_externa()` ainda não terminou sua região crítica. Isso viola a proteção pretendida e pode resultar em **condições de corrida**, ou seja, acesso concorrente a recursos e falhas de sincronização.
+
+A maneira mais segura de garantir a restauração do estado original do PRIMASK é utilizar as funções `__get_PRIMASK()` e `__set_PRIMASK()` com salvamento e restauração do valor do registrador, conforme o exemplo abaixo:
+
+```c copy
+uint32_t primask = __get_PRIMASK();
+__disable_irq();
+
+// Região crítica
+
+__set_PRIMASK(primask); // restaura o estado anterior do PRIMASK
+```
+
+Com essa abordagem, é possível garantir que:
+
+- Se as interrupções já estavam desabilitadas antes da entrada na região crítica, continuarão desabilitadas após a saída.
+- Se estavam habilitadas, serão corretamente reabilitadas após o término da seção protegida.
+- O código passa a ser seguro para **chamadas aninhadas** e uso inadvertido de múltiplos `__disable_irq()` e `__enable_irq()`.
+
+Esse padrão é particularmente importante em bibliotecas reutilizáveis ou em sistemas de tempo real onde múltiplas camadas do software podem tentar controlar interrupções simultaneamente. 
+
+## Alterando o nível de prioridade via BASEPRI
 
 
