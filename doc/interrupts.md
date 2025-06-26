@@ -221,12 +221,28 @@ No exemplo acima, a chamada `__enable_irq()` dentro da função `rotina_interna(
 A maneira mais segura de garantir a restauração do estado original do PRIMASK é utilizar as funções `__get_PRIMASK()` e `__set_PRIMASK()` com salvamento e restauração do valor do registrador, conforme o exemplo abaixo:
 
 ```c copy
-uint32_t primask = __get_PRIMASK();
-__disable_irq();
+uint32_t hal_cpu_critsec_enter(void)
+{
+    uint32_t primask = __get_PRIMASK();
 
-// Região crítica
+    __disable_irq();
+    
+    return primask;
+}
 
-__set_PRIMASK(primask); // restaura o estado anterior do PRIMASK
+void hal_cpu_critsec_leave(uint32_t status)
+{
+    __set_PRIMASK(status);
+}
+
+void rotina(void)
+{
+    uint32_t status = hal_cpu_critsec_enter();
+  
+    // Região crítica
+  
+    hal_cpu_critsec_leave(status);
+}
 ```
 
 Com essa abordagem, é possível garantir que:
