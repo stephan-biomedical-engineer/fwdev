@@ -7,7 +7,7 @@ set(SOURCES
     main.c
     ${CMAKE_SOURCE_DIR}/../../../source/utl/utl_dbg.c
     ${CMAKE_SOURCE_DIR}/../../../source/utl/printf/utl_printf.c
-    ${CMAKE_SOURCE_DIR}/../../../source/port/common/port_stdou.c
+    ${CMAKE_SOURCE_DIR}/../../../source/port/common/port_stdout.c
 )
 
 if(WIN32)
