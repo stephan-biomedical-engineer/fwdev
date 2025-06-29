@@ -41,7 +41,7 @@ Dois comentários antes de iniciar: o primeiro é relacionado ao ```#pragma once
 
 // file contents
 
-#endif /**  __HAL_DBG_H__ /**
+#endif /**  __HAL_DBG_H__ **/
 ```
 
 Note que a definição foi criada com base no nome do arquivo, sendo uma prática comum deixar tudo em maiúsculas e colocar dois underscores no início e no fim.
