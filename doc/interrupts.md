@@ -280,17 +280,17 @@ O BASEPRI é um registrador de 32 bits, mas apenas os 8 bits menos significativo
 
  O valor do BASEPRI é configurado através da chamada do CMSIS `__set_BASEPRI()`, que recebe um valor de prioridade. O valor atual do BASEPRI pode ser lido com a função `__get_BASEPRI()`.
 
- Assim como no caso de PRIMASK, também existem cuidados ao usar BASEPRI em casos aninhados. 
+ Assim como no caso de PRIMASK, também existem cuidados ao usar BASEPRI em casos aninhados. A seguir é apresentada uma implementação onde o suporte a BASEPRI é adicionado. Assim, quando o nível de prioridade for zero, o BASEPRI não é usado e o PRIMASK é utilizado para desabilitar todas as interrupções. Quando um nível de prioridade diferente de zero é passado, o BASEPRI é usado para definir o nível mínimo de prioridade que pode ser atendido.
 
  ```C copy
 // Input level codification:
-//   0: disable interrupts
+//   0: disable all interrupts
 //   n: interrupt level
 //      interrupts with priority >= n will be disabled
 //      interrupts with priority <  n will be enabled
 //
 // Returned level codification:
-//   If bit1 is on (bit A), then basepri was used instead of primask
+//   If bit1 is on (bit A), then basepri was used instead of primask (a level was provided)
 //   and the level value is shifted by 4 bits to the right.
 //
 //   If bit1 is off, then primask was used instead of basepri (the same as using __disable_irq() / __enable_irq())
@@ -300,29 +300,30 @@ O BASEPRI é um registrador de 32 bits, mas apenas os 8 bits menos significativo
 // |         31-8           | 7-4| 3-0|
 // |000000000000000000000000|PRIO|00AB|
 //
-#define PORT_CPU_INTR_USING_BASEPRI           (0x02)
-#define PORT_CPU_INTR_DISABLED_BEFORE_CALLING (0x01)
-#define PORT_CPU_INTR_ENABLED_BEFORE_CALLING  (0x00)
+// indicates when basepri was used or not
+#define PORT_CPU_BASEPRI_USED  (0x02)
+// indicates if interrupts were enabled or disabled before entering critical section
+#define PORT_CPU_INT_DISABLED  (0x01)
+#define PORT_CPU_INT_ENABLED   (0x00)
 // bits 7:4 are used for priority, bits 3:0 are not used
-#define PORT_CPU_INTR_PRIMASK_BITS_SHIFTED    (4)
+#define PORT_CPU_PRIO_BITS_POS (4)
 
-static uint32_t hal_cpu_critsec_enter(uint32_t level)
+static uint32_t port_cpu_critsec_enter(uint32_t level)
 {
     uint32_t last_level = 0;
 
     if(level == 0)
     {
-    	  // PRIMASK:
+    	// PRIMASK:
         // 0 - interrupts enabled,
         // 1 - interrupts disabled
-        last_level = __get_PRIMASK() ? PORT_CPU_INTR_DISABLED_BEFORE_CALLING : PORT_CPU_INTR_ENABLED_BEFORE_CALLING;
+        last_level = __get_PRIMASK() ? PORT_CPU_INT_DISABLED : PORT_CPU_INT_ENABLED;
         __disable_irq();
     }
     else
     {
-    	  last_level = __get_BASEPRI();
-        __set_BASEPRI(level << PORT_CPU_INTR_PRIMASK_BITS_SHIFTED);
-        last_level |= PORT_CPU_INTR_USING_BASEPRI;
+    	last_level = __get_BASEPRI() | PORT_CPU_BASEPRI_USED;
+        __set_BASEPRI(level << PORT_CPU_PRIO_BITS_POS);
     }
 
     __ISB(); // flush pipeline
@@ -331,25 +332,39 @@ static uint32_t hal_cpu_critsec_enter(uint32_t level)
     return last_level;
 }
 
-static void hal_cpu_crisec_leave(uint32_t last_level)
+static void port_cpu_critsec_leave(uint32_t last_level)
 {
-    if(last_level < PORT_CPU_INTR_USING_BASEPRI)
+    if(last_level & PORT_CPU_BASEPRI_USED)
     {
-    	if(last_level == PORT_CPU_INTR_ENABLED_BEFORE_CALLING)
-    	{
-        	// Restoring interrupts as they were enabled before calling
-    		  __enable_irq();
-    	}
-    	// else: keep interrupts disabled (as they were before)
+    	last_level &=  ~(PORT_CPU_BASEPRI_USED);
+    	__set_BASEPRI(last_level);
     }
     else
     {
-    	  last_level &=  ~(PORT_CPU_INTR_USING_BASEPRI);
-    	  __set_BASEPRI(last_level);
+    	if(last_level == PORT_CPU_INT_ENABLED)
+    	{
+        	// Restoring interrupts as they were enabled before calling
+    		__enable_irq();
+    	}
+    	// else: keep interrupts disabled (as they were before)
     }
 
-	  __ISB(); // flush pipeline
-	  __DSB(); // wait for all memory accesses to complete
+	__ISB(); // flush pipeline
+	__DSB(); // wait for all memory accesses to complete
 }
  ```
 
+> [!NOTE]
+> :robot: :brain:
+
+A função `port_cpu_critsec_enter()` recebe um parâmetro inteiro denominado `level`, que define o tipo de bloqueio a ser aplicado às interrupções. Quando esse parâmetro é igual a zero, a função atua de forma global, utilizando o registrador `PRIMASK`. Nesse modo, a rotina consulta o valor atual de `PRIMASK`, armazenando se as interrupções estavam habilitadas (bit 0) ou não no momento da chamada. Em seguida, invoca a função `__disable_irq()`, que desabilita todas as interrupções mascaráveis. Esse caminho é adequado para proteger regiões críticas mais simples, onde não se deseja granularidade no controle das prioridades.
+
+Se, por outro lado, o valor de `level` for maior que zero, a função opta por utilizar o registrador `BASEPRI`. Nesse caso, ela primeiro lê e armazena o valor atual de `BASEPRI`, marcando que essa foi a técnica empregada ao setar um bit indicador no valor de retorno (bit 1). Em seguida, o novo valor de `BASEPRI` é configurado com base no parâmetro level (lembre-se que é preciso um shit dado por `__NVIC_PRIO_BITS`, conforme definido pela arquitetura). Essa técnica permite que apenas as interrupções com prioridade inferior ou igual ao valor de indicado sejam mascaradas, mantendo habilitadas aquelas de maior prioridade. É especialmente útil em sistemas com requisitos de tempo real mais exigentes, onde algumas interrupções devem permanecer operantes mesmo durante seções críticas.
+
+Independentemente do caminho tomado — via `PRIMASK` ou `BASEPRI` — a função finaliza executando as instruções de barreira `ISB` (_Instruction Synchronization Barrier_) e `DSB` (_Data Synchronization Barrier_). Essas instruções garantem que todas as alterações nos registradores de controle sejam efetivamente aplicadas antes que a execução continue, evitando efeitos colaterais decorrentes de reordenação de instruções ou acessos pendentes à memória.
+
+A função `port_cpu_critsec_leave()` complementa a operação anterior, restaurando o estado original das interrupções ao final da seção crítica. Se o valor retornado por `port_cpu_critsec_enter()` indicar que `BASEPRI` foi utilizado, então o valor anterior desse registrador é restaurado. Caso contrário, se o método empregado foi o uso de `PRIMASK`, a função verifica se as interrupções estavam habilitadas antes da entrada na seção crítica e, se for o caso, chama `__enable_irq()` para restaurar o estado anterior. Em ambos os casos, as instruções `ISB` e `DSB` são novamente aplicadas para garantir a integridade da operação.
+
+Essa implementação oferece uma base sólida para desenvolvimento seguro em ambientes multitarefa ou com requisitos críticos de temporização. Ao preservar o estado original de maneira precisa e permitir o controle seletivo de prioridades, ela permite a construção de sistemas embarcados confiáveis, com controle fino sobre o comportamento de interrupções.
+
+Infelizmente, dada a semântica de uso do `BASEPRI` onde o valor zero indica que nenhuma interrupção será mascarada, não é possível usar somente o `BASEPRI` para desabilitar todas as interrupções. 
