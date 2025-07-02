@@ -234,6 +234,10 @@ Com isso, fica claro a forma básica de abstração de hardware que será usada 
 
 ### Ponteiros opacos
 
+Para discutir o conceito de ponteiro opaco, é interessante usar outro exemplo de abstração de hardware, dessa vez relacionado a uma porta serial. A ideia é criar uma interface que permita o uso de diversas portas seriais, sem depender de qualquer implementação específica. Um dos problemas está justamente relacionado a estruturas de dados de controle de uma porta serial, que podem variar bastante entre implementações. No Windows, por exemplo, o dispositivo serial é tratado como um arquivo arquivo via funções como CreateFile(), ReadFile() e WriteFile(), usadas através de um manipulador de arquivos (HANDLE). A configuração dos parâmetros da serial exige uma estrutura do tipo `DCB` (Device Control Block), que é bem diferente da estrutura usada no Linux, por exemplo. Todos esses dados precisar estar ocultos do usuário e não devem ser expostos na interface de uso da porta serial.
+
+
+
 Um outro ponto chama a atenção no arquivo de inclusão: a declaração do tipo de dados personalizado `hal_uart_dev_t`. Ele é declarado como um ponteiro para uma estrutura do tipo `struct *hal_uart_dev_s` mas note que não existe nenhuma definição do conteúdo da estrutura. Essa é uma técnica conhecida como ponteiro opaco, onde é possível declarar um ponteiro para uma estrutura sem se conhecer o conteúdo da mesma. Como será visto posteriormente, a estrutura `struct hal_uart_dev_s` será declarada apenas na realização da implementação da serial, no arquivo `hal_uart.c`. Com isso, nenhum detalhe é relevado sobre o dispositivo e a estrutura pode ser personalizada, a depender do porte desejado.
 
 Para dar vida a nossa implementação, vamos apresentar (só dessa vez!) quatro portes diferentes: Win32, Linux, MacOS e STM32L411 (BlackPill). Assim você vai poder ver claramente as diferenças na realização da implementação. 
