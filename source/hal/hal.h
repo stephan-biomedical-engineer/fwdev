@@ -33,10 +33,10 @@ extern "C"
 #include "utl_dbg.h"
 #include "hal_cpu.h"
 
-extern hal_cpu_driver_t HAL_CPU_DRIVER;
+    extern hal_cpu_driver_t HAL_CPU_DRIVER;
 
-void hal_init(void);
-void hal_deinit(void);
+    void hal_init(void);
+    void hal_deinit(void);
 
 #ifdef __cplusplus
 }
