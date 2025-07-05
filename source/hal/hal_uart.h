@@ -51,6 +51,7 @@ typedef struct hal_uart_driver_s
     void (*init)(void);
     void (*deinit)(void);
     hal_uart_dev_t (*create)(hal_uart_port_t dev);
+    void (*delete)(hal_uart_port_t dev);
     bool (*configure)(hal_uart_dev_t dev, hal_uart_config_t* cfg);
     void (*interrupt_set)(hal_uart_dev_t dev, hal_uart_interrupt_t fun);
     void (*open)(hal_uart_dev_t dev);
@@ -64,6 +65,7 @@ typedef struct hal_uart_driver_s
 void hal_uart_init(void);
 void hal_uart_deinit(void);
 hal_uart_dev_t hal_uart_create(hal_uart_port_t dev);
+void hal_uart_delete(hal_uart_port_t dev);
 bool hal_uart_configure(hal_uart_dev_t dev, hal_uart_config_t* cfg);
 void hal_uart_interrupt_set(hal_uart_dev_t dev, hal_uart_interrupt_t fun);
 void hal_uart_open(hal_uart_dev_t dev);

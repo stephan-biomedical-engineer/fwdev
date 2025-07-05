@@ -238,28 +238,28 @@ Para discutir o conceito de ponteiro opaco, é interessante usar outro exemplo d
 
 Um dos problemas está justamente relacionado a estruturas de dados de controle de uma porta serial, que podem variar bastante entre implementações. No Windows, por exemplo, o dispositivo serial é tratado como um arquivo arquivo, sendo manipulado via funções como `CreateFile()`, `ReadFile()` e `WriteFile()`, normalmente requerendo um manipulador de arquivos (um `HANDLE`). A configuração dos parâmetros da serial exige uma estrutura do tipo `DCB` (Device Control Block), que é bem diferente da estrutura usada no Linux, por exemplo. Se deseja ter uma recepção assíncrona, é preciso criar tarefas de recepção separadas, buffer circulares, estruturas de controle e sincronização, tudo isso dependendo do sistema operacional em uso. Todos esses dados não devem ser expostos na interface de uso da porta serial.
 
+Uma proposta de interface pode ser vista no arquivo [hal_uart.h](https://github.com/marcelobarrosufu/fwdev/blob/f11249695efc98c3d7d9c3d1e036a02584159459/source/hal/hal_uart.h). Esse arquivo define uma interface genérica para a porta serial, com funções de configuração, leitura e escrita. Duas formas de operação são possíveis:
 
+- **polling**: o usuário chama as funções de leitura e escrita diretamente, sem uso de interrupções. Os dados recebidos devem ser armazenados pelo driver em um buffer, que pode ser lido pelo usuário quando desejado. Um problema aqui é que dados podem ser perdidos caso o buffer fiquei e o usuário não leia os dados recebidos a tempo. 
+- **interrupção**: o usuário pode configurar callbacks para recepção de dados, permitindo que o driver receba os dados de forma assíncrona, sem necessidade de polling, enviando os dados recebidos para o usuário através de uma função de callback. 
 
+O fluxo de operação esperado para _polling_  é o seguinte:
 
+- O usuário chama a função `hal_uart_init()` para inicializar o driver da porta serial.
+- O usuário chama a função `hal_uart_create()` para criar uma instância da porta serial. Essa função retorna um ponteiro opaco do tipo `hal_uart_dev_t`, que é um ponteiro para uma estrutura do tipo `struct hal_uart_dev_s`. Essa estrutura contém todos os dados necessários para o funcionamento da porta serial, mas não é exposta ao usuário. O usuário não precisa conhecer o conteúdo dessa estrutura, apenas o ponteiro opaco.
+- O usuário chama a função `hal_uart_configure()` para configurar a porta serial, passando um ponteiro para uma estrutura do tipo `hal_uart_config_t`. Essa estrutura contém os parâmetros de configuração da porta serial, como baud rate, paridade, bits de parada e controle de fluxo. 
+- O usuário chama a função `hal_uart_open()` para abrir a porta serial, permitindo que ela seja usada para leitura e escrita.
+- O usuário pode chamar as funções `hal_uart_read()` e `hal_uart_write()` para ler e escrever dados na porta serial, respectivamente. 
 
+Caso se decida usar interrupções, o fluxo de operação é um pouco diferente. No caso, antes de abrir a porta serial, o usuário deve configurar uma função de callback para recepção de dados  através da função `hal_uart_interrupt_set()`, permitindo que o driver receba os dados de forma assíncrona. Essa função também pode ser usada para desativar o modo de interrupção, caso seja passada um ponteiro nulo como parâmetro para a função. Assim, o driver volta a operar no modo de polling.
 
-
-
-
-Um outro ponto chama a atenção no arquivo de inclusão: a declaração do tipo de dados personalizado `hal_uart_dev_t`. Ele é declarado como um ponteiro para uma estrutura do tipo `struct *hal_uart_dev_s` mas note que não existe nenhuma definição do conteúdo da estrutura. Essa é uma técnica conhecida como ponteiro opaco, onde é possível declarar um ponteiro para uma estrutura sem se conhecer o conteúdo da mesma. Como será visto posteriormente, a estrutura `struct hal_uart_dev_s` será declarada apenas na realização da implementação da serial, no arquivo `hal_uart.c`. Com isso, nenhum detalhe é relevado sobre o dispositivo e a estrutura pode ser personalizada, a depender do porte desejado.
-
-Para dar vida a nossa implementação, vamos apresentar (só dessa vez!) quatro portes diferentes: Win32, Linux, MacOS e STM32L411 (BlackPill). Assim você vai poder ver claramente as diferenças na realização da implementação. 
-
-### Implementação para Win32
-
-
-### Implementação para Linux
-
+Para dar vida a nossa implementação, vamos apresentar um porta para MacOS e STM32L411 (BlackPill). Assim você vai poder ver claramente as diferenças na realização da implementação. O arquivo `hal_uart.c` é o mesmo para ambas as plataformas, mas os arquivos de implementação do porte são diferentes.
 
 ### Implementação para MacOS
 
 ### Implementação para STM32L411
 
+<!-- 
 ```C
 #include "main.h"
 #include "hal_uart.h"
