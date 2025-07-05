@@ -28,13 +28,6 @@ typedef enum hal_uart_parity_e
     HAL_UART_PARITY_EVEN,
 } hal_uart_parity_t;
 
-typedef enum hal_uart_data_size_e
-{
-    HAL_UART_DATA_SIZE_7 = 0,
-    HAL_UART_DATA_SIZE_8,
-    HAL_UART_DATA_SIZE_9,
-} hal_uart_data_size_t;
-
 typedef enum hal_uart_flow_control_e
 {
     HAL_UART_FLOW_CONTROL_NONE = 0,
@@ -50,7 +43,6 @@ typedef struct hal_uart_config_s
     hal_uart_baud_rate_t baud_rate;
     hal_uart_parity_t parity;
     hal_uart_stop_bits_t stop_bits;
-    hal_uart_data_size_t data_size;
     hal_uart_flow_control_t flow_control;
 } hal_uart_config_t;
 
