@@ -142,7 +142,7 @@ Na abstração proposta, mais dois arquivos são importantes. O primeiro é o ar
 extern hal_cpu_driver_t HAL_CPU_DRIVER;
 ```
 
-O segundo arquivo é o [hal_cpu.c](https://github.com/marcelobarrosufu/fwdev/blob/f2b6c7ec997e6cf6f05c5cb11786ed2dff5d01f7/source/hal/hal_cpu.c). Esse arquivo é o ponto de entrada para as chamadas relacionadas à implementação do driver, usando a promessa feita. Ele pode ser usado também para implementar ações que são portáveis já, evitando levar esse conteúdo para um driver. O início do arquivo é o seguinte:
+O segundo arquivo é o [hal_cpu.c](https://github.com/marcelobarrosufu/fwdev/blob/f2b6c7ec997e6cf6f05c5cb11786ed2dff5d01f7/source/hal/hal_cpu.c). Esse arquivo é o ponto de entrada para as chamadas relacionadas à implementação do driver, usando a promessa feita. Ele pode ser usado também para implementar ações que já são portáveis (baseadas em outras interfaces da abstração), evitando levar esse conteúdo para o driver. O início do arquivo é o seguinte:
 
 ```C copy
 #include "hal.h"
@@ -182,7 +182,7 @@ uint32_t hal_cpu_random_seed_get(void)
 // ...
 ````
 
-Nesse arquivo é criado um ponteiro para a implementação do driver, usado nas funções disponibilizadas na estrutura `hal_cpu_driver_t`. Enquanto represente novamente um ponto onde se perde um pouco de desempenho, a abstração e portabilidade são favorecidas. Vale lembrar que, a depender do nível de otimização do compilador, essa perda pode ser quase nula.
+Nesse arquivo é criado um ponteiro para a implementação do driver. Esse ponteiro é para acesso às funções disponibilizadas na estrutura `hal_cpu_driver_t`. Enquanto represente novamente um ponto onde se perde um pouco de desempenho, a abstração e portabilidade são favorecidas. Vale lembrar que, a depender do nível de otimização do compilador, essa perda pode ser quase nula.
 
 O que falta agora é criar a implementação do driver da CPU, que será feita de forma diferente para cada porte. O trecho a seguir mostra como isso poderia ser feito para um microcontrolador STM32F4, por exemplo. A implementação não foi colocada completa aqui, mas você pode ver o exemplo completo no repositório do projeto, no arquivo [port_cpu.c](https://github.com/marcelobarrosufu/fwdev/blob/f2b6c7ec997e6cf6f05c5cb11786ed2dff5d01f7/source/port/stm32/port_cpu.c). Estamos também assumindo que o projeto foi criado pelo STM32CubeIDE usando os drivers de alto nível da ST (HAL).
 
@@ -230,11 +230,19 @@ hal_cpu_driver_t HAL_CPU_DRIVER =
 
 Ao final do arquivo, existe finalmente a realização do driver, na declaração `hal_cpu_driver_t HAL_CPU_DRIVER = ...`, onde os ponteiros de função da estrutura `hal_cpu_driver_t` são preenchidos com as funções implementadas. Um cuidado adicional é definir todas as funções como `static`, para que não sejam visíveis fora do arquivo, evitando possíveis conflitos de nomes com outras realizações dessa interface. Note que a inclusão do arquivo `main.h` da ST traz todas as definições necessárias para o funcionamento do driver, como a definição do `RNG_HandleTypeDef` e outras constantes, tornando esse arquivo totalmente dependente de plataforma, como esperado.
 
-Com isso, fica claro a forma básica de abstração de hardware que será usada daqui pra diante. No entanto, para alguns dispositivos que permitam múltiplas instâncias, como uma porta serial ou SPI, é necessário um pouco mais de trabalho, com o emprego da técnica de ponteiros opacos. Vamos ver como isso é feito a seguir. Ah, e se você ficou curioso com as funções relacionada a interrupção, recomendo ler a seção sobre [interrupções no Cortex M](./interrupts.md).
+Com isso, fica claro a forma básica de abstração de hardware que será usada daqui pra diante. No entanto, para alguns dispositivos que permitam múltiplas instâncias ou que possuem muitos detalhes de configuração relacionados ao sistema operacional em uso, como uma porta serial ou SPI, é necessário um pouco mais de trabalho. Em geral, uma alternativa é o emprego da técnica de ponteiros opacos. Vamos ver como isso é feito a seguir. Ah, e se você ficou curioso com as funções relacionada a interrupção, recomendo ler a seção sobre [interrupções no Cortex M](./interrupts.md).
 
 ### Ponteiros opacos
 
-Para discutir o conceito de ponteiro opaco, é interessante usar outro exemplo de abstração de hardware, dessa vez relacionado a uma porta serial. A ideia é criar uma interface que permita o uso de diversas portas seriais, sem depender de qualquer implementação específica. Um dos problemas está justamente relacionado a estruturas de dados de controle de uma porta serial, que podem variar bastante entre implementações. No Windows, por exemplo, o dispositivo serial é tratado como um arquivo arquivo via funções como CreateFile(), ReadFile() e WriteFile(), usadas através de um manipulador de arquivos (HANDLE). A configuração dos parâmetros da serial exige uma estrutura do tipo `DCB` (Device Control Block), que é bem diferente da estrutura usada no Linux, por exemplo. Todos esses dados precisar estar ocultos do usuário e não devem ser expostos na interface de uso da porta serial.
+Para discutir o conceito de ponteiro opaco, é interessante usar outro exemplo de abstração de hardware, dessa vez relacionado a uma porta serial. A ideia é criar uma interface que permita o uso de diversas portas seriais, sem depender de qualquer implementação específica. 
+
+Um dos problemas está justamente relacionado a estruturas de dados de controle de uma porta serial, que podem variar bastante entre implementações. No Windows, por exemplo, o dispositivo serial é tratado como um arquivo arquivo, sendo manipulado via funções como `CreateFile()`, `ReadFile()` e `WriteFile()`, normalmente requerendo um manipulador de arquivos (um `HANDLE`). A configuração dos parâmetros da serial exige uma estrutura do tipo `DCB` (Device Control Block), que é bem diferente da estrutura usada no Linux, por exemplo. Se deseja ter uma recepção assíncrona, é preciso criar tarefas de recepção separadas, buffer circulares, estruturas de controle e sincronização, tudo isso dependendo do sistema operacional em uso. Todos esses dados precisar estar ocultos do usuário e não devem ser expostos na interface de uso da porta serial.
+
+
+
+
+
+
 
 
 
