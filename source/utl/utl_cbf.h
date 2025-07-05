@@ -1,6 +1,11 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 typedef enum utl_cbf_status_s
 {
     UTL_CBF_OK = 0,
@@ -62,3 +67,7 @@ utl_cbf_status_t utl_cbf_init(utl_cbf_t* cb, uint8_t* area, uint16_t size);
  @return ver @ref cbf_status_s
 */
 utl_cbf_status_t utl_cbf_put(utl_cbf_t* cb, uint8_t c);
+
+#ifdef __cplusplus
+}
+#endif
