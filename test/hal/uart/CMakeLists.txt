@@ -12,7 +12,7 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/../../../source/app/app.c
     ${CMAKE_SOURCE_DIR}/../../../source/utl/utl_dbg.c
     ${CMAKE_SOURCE_DIR}/../../../source/utl/printf/utl_printf.c
-    ${CMAKE_SOURCE_DIR}/../../../source/utl/printf/utl_cbf.c
+    ${CMAKE_SOURCE_DIR}/../../../source/utl/utl_cbf.c
     ${CMAKE_SOURCE_DIR}/../../../source/hal/hal.c
     ${CMAKE_SOURCE_DIR}/../../../source/hal/hal_cpu.c
     ${CMAKE_SOURCE_DIR}/../../../source/hal/hal_uart.c
