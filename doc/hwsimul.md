@@ -257,7 +257,9 @@ O fluxo de operação esperado para _polling_  é o seguinte:
 
 Caso se decida usar interrupções, o fluxo de operação é um pouco diferente. No caso, antes de abrir a porta serial, o usuário deve configurar uma função de callback para recepção de dados  através da função `hal_uart_interrupt_set()`, permitindo que o driver receba os dados de forma assíncrona. Essa função também pode ser usada para desativar o modo de interrupção, caso seja passada um ponteiro nulo como parâmetro para a função. Assim, o driver volta a operar no modo de polling.
 
-Para dar vida a nossa implementação, vamos apresentar um porta para MacOS e STM32L411 (BlackPill). Assim você vai poder ver claramente as diferenças na realização da implementação. O arquivo `hal_uart.c` é o mesmo para ambas as plataformas, mas os arquivos de implementação do porte são diferentes.
+Para dar vida a nossa implementação, vamos apresentar um porta para MacOS e STM32L411 (BlackPill). Assim você vai poder ver claramente as diferenças na realização da implementação. O arquivo `hal_uart.c` é o mesmo para ambas as plataformas, mas os arquivos de implementação do porte são diferentes. 
+
+Para MacOS, a implementa está disponível no arquivo [port_uart.c](https://github.com/marcelobarrosufu/fwdev/blob/95469beffa6000165b4c1c43d315b43aecafe8ec/source/port/mac/port_uart.c).
 
 <!-- 
 
