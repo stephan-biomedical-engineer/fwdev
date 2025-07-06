@@ -246,20 +246,25 @@ Uma proposta de interface pode ser vista no arquivo [hal_uart.h](https://github.
 O fluxo de operação esperado para _polling_  é o seguinte:
 
 - O usuário chama a função `hal_uart_init()` para inicializar o driver da porta serial.
-- O usuário chama a função `hal_uart_create()` para criar uma instância da porta serial. Essa função retorna um ponteiro opaco do tipo `hal_uart_dev_t`, que é um ponteiro para uma estrutura do tipo `struct hal_uart_dev_s`. Essa estrutura contém todos os dados necessários para o funcionamento da porta serial, mas não é exposta ao usuário. O usuário não precisa conhecer o conteúdo dessa estrutura, apenas o ponteiro opaco.
-- O usuário chama a função `hal_uart_configure()` para configurar a porta serial, passando um ponteiro para uma estrutura do tipo `hal_uart_config_t`. Essa estrutura contém os parâmetros de configuração da porta serial, como baud rate, paridade, bits de parada e controle de fluxo. 
-- O usuário chama a função `hal_uart_open()` para abrir a porta serial, permitindo que ela seja usada para leitura e escrita.
+- O usuário chama a função `hal_uart_open()` para criar uma instância da porta serial. Essa função retorna um ponteiro opaco do tipo `hal_uart_dev_t`, que é um ponteiro para uma estrutura do tipo `struct hal_uart_dev_s`. Essa estrutura contém todos os dados necessários para o funcionamento da porta serial, mas não é exposta ao usuário. O usuário não precisa conhecer o conteúdo dessa estrutura, apenas o ponteiro opaco. A configuração é feita nesse momento, através de uma estrutura do tipo `hal_uart_config_t`. Essa estrutura contém os parâmetros de configuração da porta serial, como baud rate, paridade, bits de parada e controle de fluxo e a porta fica disponível pra uso. 
 - O usuário pode chamar as funções `hal_uart_read()` e `hal_uart_write()` para ler e escrever dados na porta serial, respectivamente. 
+- O usuário pode chamar a função `hal_uart_flush()` para limpar os buffers de recepção, a qualquer momento.
+- O usuário pode chamar a função `hal_uart_bytes_available()` para verificar quantos bytes estão disponíveis para leitura na porta serial.
+- Quando não pretender mais usar a porta serial, o usuário deve chamar a função `hal_uart_close()` para fechar a porta serial, liberando os recursos alocados pela porta.
+- Finalmente, o usuário pode chamar a função `hal_uart_deinit()` para liberar os recursos usados pelo driver da porta serial.
+
+```C copy
 
 Caso se decida usar interrupções, o fluxo de operação é um pouco diferente. No caso, antes de abrir a porta serial, o usuário deve configurar uma função de callback para recepção de dados  através da função `hal_uart_interrupt_set()`, permitindo que o driver receba os dados de forma assíncrona. Essa função também pode ser usada para desativar o modo de interrupção, caso seja passada um ponteiro nulo como parâmetro para a função. Assim, o driver volta a operar no modo de polling.
 
 Para dar vida a nossa implementação, vamos apresentar um porta para MacOS e STM32L411 (BlackPill). Assim você vai poder ver claramente as diferenças na realização da implementação. O arquivo `hal_uart.c` é o mesmo para ambas as plataformas, mas os arquivos de implementação do porte são diferentes.
 
+<!-- 
+
 ### Implementação para MacOS
 
 ### Implementação para STM32L411
 
-<!-- 
 ```C
 #include "main.h"
 #include "hal_uart.h"
