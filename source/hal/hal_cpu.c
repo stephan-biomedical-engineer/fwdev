@@ -1,60 +1,71 @@
 #include "hal.h"
 
-static hal_cpu_driver_t* drv = &HAL_CPU_DRIVER;
+// static hal_cpu_driver_t* drv = &HAL_CPU_DRIVER;
 
 void hal_cpu_init(void)
 {
-    drv->init();
+    // drv->init();
+    HAL_CPU_DRIVER->init();
 }
 
 void hal_cpu_deinit(void)
 {
-    drv->deinit();
+    // drv->deinit();
+    HAL_CPU_DRIVER->deinit();
 }
 
 void hal_cpu_reset(void)
 {
-    drv->reset();
+    // drv->reset();
+    HAL_CPU_DRIVER->reset();
 }
 
 void hal_cpu_watchdog_refresh(void)
 {
-    drv->watchdog_refresh();
+    // drv->watchdog_refresh();
+    HAL_CPU_DRIVER->watchdog_refresh();
 }
 
 void hal_cpu_id_get(uint8_t id[HAL_CPU_ID_SIZE])
 {
-    drv->id_get(id);
+    // drv->id_get(id);
+    HAL_CPU_DRIVER->id_get(id);
 }
 
 uint32_t hal_cpu_random_seed_get(void)
 {
-    return drv->random_seed_get();
+    // return drv->random_seed_get();
+    return HAL_CPU_DRIVER->random_seed_get();
 }
 
 uint32_t hal_cpu_critical_section_enter(hal_cpu_cs_level_t level)
 {
-    return drv->critical_section_enter(level);
+    // return drv->critical_section_enter(level);
+    return HAL_CPU_DRIVER->critical_section_enter(level);
 }
 
 void hal_cpu_critical_section_leave(uint32_t last_level)
 {
-    drv->critical_section_leave(last_level);
+    // drv->critical_section_leave(last_level);
+    HAL_CPU_DRIVER->critical_section_leave(last_level);
 }
 
 void hal_cpu_low_power_enter(void)
 {
-    drv->low_power_enter();
+    // drv->low_power_enter();
+    HAL_CPU_DRIVER->low_power_enter();
 }
 
 void hal_cpu_sleep_ms(uint32_t tmr_ms)
 {
-    drv->sleep_ms(tmr_ms);
+    // drv->sleep_ms(tmr_ms);
+    HAL_CPU_DRIVER->sleep_ms(tmr_ms);
 }
 
 uint32_t hal_cpu_time_get_ms(void)
 {
-    return drv->time_get_ms();
+    // return drv->time_get_ms();
+    return HAL_CPU_DRIVER->time_get_ms();
 }
 
 uint32_t hal_cpu_time_elapsed_get_ms(uint32_t tmr_old_ms)

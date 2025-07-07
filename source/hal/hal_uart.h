@@ -5,6 +5,10 @@ extern "C"
 {
 #endif
 
+#include <stdint.h>     // para uint8_t
+#include <stddef.h>     // para size_t
+#include <sys/types.h>  // para ssize_t
+
 typedef enum hal_uart_port_e
 {
     HAL_UART_PORT0 = 0,

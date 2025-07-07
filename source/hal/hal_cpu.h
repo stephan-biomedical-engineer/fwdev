@@ -5,6 +5,9 @@ extern "C"
 {
 #endif
 
+#include <stdint.h>
+#include <stddef.h>
+
 #define HAL_CPU_ID_SIZE 12
 
 typedef enum hal_cpu_cs_level_e

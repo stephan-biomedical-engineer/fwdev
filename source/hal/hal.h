@@ -34,8 +34,8 @@ extern "C"
 #include "hal_cpu.h"
 #include "hal_uart.h"
 
-extern hal_cpu_driver_t HAL_CPU_DRIVER;
-extern hal_uart_driver_t HAL_UART_DRIVER;
+extern const hal_cpu_driver_t* HAL_CPU_DRIVER;
+extern const hal_uart_driver_t* HAL_UART_DRIVER;
 
 void hal_init(void);
 void hal_deinit(void);
