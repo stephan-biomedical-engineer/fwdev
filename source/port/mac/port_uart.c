@@ -218,7 +218,7 @@ static hal_uart_dev_t port_uart_open(hal_uart_port_t dev, hal_uart_config_t* cfg
     // create thread to receive data
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, 4096); 
+    pthread_attr_setstacksize(&attr, 4096);
     int err = pthread_create(&pdev->thread, NULL, &port_uart_rx_thread, (void*) pdev);
     if(err != 0)
     {
@@ -237,7 +237,7 @@ static void port_uart_close(hal_uart_dev_t pdev)
 {
     if(pdev->in_use)
     {
-        
+
         pdev->in_use = false;
         pthread_join(pdev->thread, NULL);
         close(pdev->file);
