@@ -28,6 +28,12 @@ void app_init(void)
         UTL_DBG_PRINTF(UTL_DBG_MOD_APP, "Failed to open UART port 0\n");
         app_terminate_set();
     }
+    {
+        const char *msg = "Hello from app_init!\n";
+        hal_uart_write(uart_dev, (uint8_t*)msg, strlen(msg));
+        hal_uart_flush(uart_dev);
+        UTL_DBG_PRINTF(UTL_DBG_MOD_APP, "Initial message sent.\n");
+    }
 }
 
 bool app_loop(void)

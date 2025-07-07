@@ -20,18 +20,29 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/../../../source/port/common/main.c
 )
 
+# Cria o executável primeiro
+add_executable(app ${SOURCES})
+
 if(WIN32)
+    # Adicione drivers para Windows aqui se necessário
 
 elseif(APPLE)
-    list(APPEND SOURCES ${CMAKE_SOURCE_DIR}/../../../source/port/mac/port_cpu.c)
-    list(APPEND SOURCES ${CMAKE_SOURCE_DIR}/../../../source/port/mac/port_uart.c)
-elseif(UNIX)
+    target_sources(app PRIVATE
+        ${CMAKE_SOURCE_DIR}/../../../source/port/mac/port_cpu.c
+        ${CMAKE_SOURCE_DIR}/../../../source/port/mac/port_uart.c
+    )
 
+elseif(UNIX)
+    target_sources(app PRIVATE
+        ${CMAKE_SOURCE_DIR}/../../../source/port/linux/port_uart.c
+        ${CMAKE_SOURCE_DIR}/../../../source/port/linux/port_cpu.c
+    )
 endif()
 
-add_executable(app ${SOURCES})
+# Link com threads
 target_link_libraries(app PRIVATE Threads::Threads)
 
+# Inclui os headers
 target_include_directories(app PRIVATE
     ${CMAKE_SOURCE_DIR}/../../../source/utl/
     ${CMAKE_SOURCE_DIR}/../../../source/app/
