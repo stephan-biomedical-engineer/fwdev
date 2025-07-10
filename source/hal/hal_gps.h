@@ -8,6 +8,18 @@ extern "C" {
 #include <stddef.h>
 #include <sys/types.h>
 
+// Defina os tipos de callback
+typedef void (*gps_sentence_callback_t)(const char* sentence, size_t length);
+
+// Defina os códigos de erro
+#define HAL_OK                    0
+#define HAL_ERR_INVALID_ARG      -1
+#define HAL_ERR_NOT_INIT         -2
+#define HAL_ERR_ALREADY_INIT     -3
+#define HAL_ERR_TIMEOUT          -4
+#define HAL_ERR_CHECKSUM         -5
+#define HAL_ERR_BUFFER_OVERFLOW  -6
+
 /**
  * @file hal_gps.h
  * @brief Interface HAL para módulo GPS usando a biblioteca gps.c (NMEA 0183).
@@ -61,8 +73,14 @@ typedef enum hal_gps_fix_quality_e {
  * @param baud_rate    Baud rate desejado para NMEA.
  * @param sentence_callback Callback opcional para cada sentença NMEA recebida.
  */
-typedef struct hal_gps_config_s {
+// typedef struct hal_gps_config_s {
+//     hal_gps_baud_rate_t baud_rate;
+//     void (*sentence_callback)(const char *sentence, size_t len);
+// } hal_gps_config_t;
+
+typedef struct {
     hal_gps_baud_rate_t baud_rate;
+    uint32_t timeout_ms;  // Adicionar se necessário
     void (*sentence_callback)(const char *sentence, size_t len);
 } hal_gps_config_t;
 
@@ -178,6 +196,9 @@ void hal_gps_flush(hal_gps_dev_t dev);
  */
 ssize_t hal_gps_read_sentence(hal_gps_dev_t dev, char *sentence, size_t max_len);
 
+hal_gps_fix_quality_t hal_gps_get_fix_quality(hal_gps_dev_t dev);
+
 #ifdef __cplusplus
 }
 #endif
+

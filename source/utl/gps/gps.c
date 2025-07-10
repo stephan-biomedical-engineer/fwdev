@@ -28,6 +28,8 @@ THE SOFTWARE.
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
+#include "utl_dbg.h" // Assuming you need this to use UTL_DBG_PRINTF
+#include "utl_printf.h" // Assuming you need this for UTL_DBG_PRINTF
 
 #define NMEA_MAX_FIELDS  (32)
 #define SENTENCE_ID_SIZE (3)
@@ -659,101 +661,113 @@ int gps_decode(struct gps_tpv *tpv, char *nmea)
     assert(tpv != NULL);
     assert(nmea != NULL);
 
+    char debug_nmea_copy[256];
+    strncpy(debug_nmea_copy, nmea, sizeof(debug_nmea_copy) - 1);
+    debug_nmea_copy[sizeof(debug_nmea_copy) - 1] = '\0';
+    printf("DEBUG gps_decode: Received NMEA (len %zu): '%s'\n", strlen(debug_nmea_copy), debug_nmea_copy);
+
     parse_function parse;
     char *token[NMEA_MAX_FIELDS];
     uint8_t checksum = 0;
     uint8_t i = 0;
-    char c0 = *nmea++;
-    char c1;
+    char c0_val, c1_val;
+    char *nmea_current_ptr = nmea; // Inicialmente aponta para '$'
 
     /* Check if the first character is the header */
-    if (c0 != '$') return GPS_ERROR_HEAD;
-    c0 = *nmea++;
+    if (*nmea_current_ptr != '$') return GPS_ERROR_HEAD;
+    nmea_current_ptr++; // <--- CORREÇÃO AQUI: AVANÇAR O PONTEIRO ALÉM DO '$'
 
-    /* Store the talker ID */
-    c1 = *nmea++;
-    if (!c0 || !c1) return GPS_ERROR_TRUNCATED;
-    tpv->talker_id[0] = c0;
-    tpv->talker_id[1] = c1;
+    // Find the '*' character to delineate the payload for checksum calculation
+    char *checksum_delimiter_ptr = strchr(nmea_current_ptr, '*'); // strchr agora procura a partir de 'G'
+    if (!checksum_delimiter_ptr) return GPS_ERROR_TRUNCATED;
 
-    /* Compute the checksum thus far */
-    checksum ^= c0 ^ c1;
-
-    /* Use the sentence ID to determine which parsing function to use */
-    /* TODO: Switch checking for sentences on and off using # defines and a config.h */
-    if (memchr(nmea, '\0', SENTENCE_ID_SIZE))
-        return GPS_ERROR_TRUNCATED;
-    else if (match_sentence_id(nmea, "GGA"))
-        parse = parse_gga;
-    else if (match_sentence_id(nmea, "GLL"))
-        parse = parse_gll;
-    else if (match_sentence_id(nmea, "GSA"))
-        parse = parse_gsa;
-    else if (match_sentence_id(nmea, "RMC"))
-        parse = parse_rmc;
-    else if (match_sentence_id(nmea, "VTG"))
-        parse = parse_vtg;
-    else if (match_sentence_id(nmea, "ZDA"))
-        parse = parse_zda;
-    else
-        return GPS_ERROR_UNSUPPORTED;
-
-    /* Advance c0 to the first character in the sentence ID. This also syncs
-     * the NMEA string pointer with the current character being processed.
-     * This helps to make the tokenizing stage easier to maintain.
-     */
-    c0 = *nmea;
-
-    /* Tokenize and compute the checksum for the body of the NMEA sentence.
-     * Note that tokenizing begins after the first ',' is encountered. This
-     * works because the sentence ID is the first string processed and we do
-     * not need to store it as a token.
-     */
-    while (c0 != '*')
-    {
-        if (!c0) return GPS_ERROR_TRUNCATED;
-        checksum ^= c0;
-        if (',' == c0)
-        {
-            *nmea = '\0';
-            token[i++] = nmea + 1;
-        }
-        c0 = (++nmea)[0];
+    // Calculate checksum for the payload (characters *between* '$' and '*')
+    // O loop agora começa de 'G' e vai até o '*'
+    for (char *p = nmea_current_ptr; p < checksum_delimiter_ptr; p++) {
+        checksum ^= *p;
     }
 
-    /* Replace the '*' with a NUL in order to mark the end of the final token
-     * in the sentence. Then advance the pointer nmea one position ahead
-     * again.
-     */
-    *nmea++ = '\0';
-    c0 = *nmea++;
+    // Now, advance nmea_current_ptr to the '*'
+    nmea_current_ptr = checksum_delimiter_ptr;
 
-    /* Validate the checksum */
-    c1 = *nmea++;
-    if (checksum != build_hex_byte(c0, c1)) return GPS_ERROR_CHECKSUM;
-    c0 = *nmea++;
+    // Get the expected checksum digits from the string
+    c0_val = *(nmea_current_ptr + 1); // First hex digit after '*'
+    c1_val = *(nmea_current_ptr + 2); // Second hex digit after '*'
 
-    /* Check for the message footer */
-    c1 = *nmea++;
-    if ((c0 != '\r') || (c1 != '\n')) return GPS_ERROR_FOOT;
+    // Validate the checksum
+    if (checksum != build_hex_byte(c0_val, c1_val)) {
+        printf("DEBUG: Calculated Checksum: 0x%02X, Expected: 0x%02X\n", checksum, build_hex_byte(c0_val, c1_val));
+        return GPS_ERROR_CHECKSUM;
+    }
+
+    // Now, handle the footer. Advance nmea_current_ptr past the checksum digits.
+    nmea_current_ptr += 3; // nmea_current_ptr now points to where '\r' or '\n' should be
+
+    // Check for the message footer: allow either "\r\n" or just "\n"
+    if (*nmea_current_ptr == '\r') {
+        nmea_current_ptr++; // Consume '\r' if present
+    }
+    if (*nmea_current_ptr != '\n') { // Must have a '\n'
+        return GPS_ERROR_FOOT;
+    }
+    nmea_current_ptr++; // Consume '\n'
+
+    // Ensure it's the end of the string after the footer
+    if (*nmea_current_ptr != '\0') {
+        return GPS_ERROR_FOOT; // Extra characters after footer
+    }
+
+    // --- TOKENIZATION ---
+    // At this point, checksum and footer are validated. Now tokenize the string in-place.
+    // We need to use the original 'nmea' pointer (which points to '$') for this.
+
+    // Restore 'nmea' to its original starting position for tokenization logic
+    nmea_current_ptr = nmea;
+
+    // Set Talker ID (e.g., 'GP')
+    tpv->talker_id[0] = *(nmea_current_ptr + 1);
+    tpv->talker_id[1] = *(nmea_current_ptr + 2);
+
+    // Determine the parsing function based on sentence ID (e.g., 'RMC')
+    if (match_sentence_id(nmea_current_ptr + 3, "GGA"))
+        parse = parse_gga;
+    else if (match_sentence_id(nmea_current_ptr + 3, "GLL"))
+        parse = parse_gll;
+    else if (match_sentence_id(nmea_current_ptr + 3, "GSA"))
+        parse = parse_gsa;
+    else if (match_sentence_id(nmea_current_ptr + 3, "RMC"))
+        parse = parse_rmc;
+    else if (match_sentence_id(nmea_current_ptr + 3, "VTG"))
+        parse = parse_vtg;
+    else if (match_sentence_id(nmea_current_ptr + 3, "ZDA"))
+        parse = parse_zda;
+    else
+        return GPS_ERROR_UNSUPPORTED; // Unsupported NMEA sentence
+
+    // Prepare tokens array. The original code's tokenization logic was intertwined
+    // with checksum calculation and pointer advancement. This new approach separates it.
+
+    // Tokenize the string in-place: iterate from start of sentence ID + first comma
+    i = 0;
+    char *current_char_for_tokenizing = nmea_current_ptr + 3 + SENTENCE_ID_SIZE; // Points to the first comma after sentence ID
+    
+    // The first token starts immediately after the first comma (e.g., '0' in 023044.00)
+    token[i++] = current_char_for_tokenizing + 1;
+
+    // Iterate up to the NUL character that replaced '*' (delimiter_ptr)
+    while (*current_char_for_tokenizing != '\0') { // Loop until the string end (where '*' was replaced)
+        if (*current_char_for_tokenizing == ',') {
+            *current_char_for_tokenizing = '\0'; // Replace comma with NUL
+            // Add the next token if it's not empty and we haven't hit the end
+            if (*(current_char_for_tokenizing + 1) != '\0') {
+                token[i++] = current_char_for_tokenizing + 1;
+            }
+        }
+        current_char_for_tokenizing++;
+    }
 
     /* Parse the NMEA sentence tokens */
     parse(tpv, (const char **)token);
 
     return GPS_OK;
-}
-
-const char *gps_error_string(const int e)
-{
-    static const char *msg[] = {
-        "No error while parsing NMEA",
-        "Header '$' missing",
-        "Footer CRLF missing",
-        "Checksum did not match",
-        "Sentence truncated",
-        "Unsupported NMEA sentence"
-    };
-
-    if ((0 <= e) && (e < ((int)(sizeof(msg) / sizeof(msg[0]))))) return msg[e];
-    return "Unknown error";
 }

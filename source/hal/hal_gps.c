@@ -1,8 +1,13 @@
 #include "hal_gps.h"
 #include "gps.h"    
 #include "hal_uart.h"
+#include "utl_dbg.h"
+#include "utl_printf.h"
+#include "hal_cpu.h"
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 // Internally, usamos o mesmo handle para UART e GPS
@@ -88,21 +93,141 @@ static void nmea_flush(hal_gps_dev_t dev) {
     hal_uart_flush(ctx->uart_dev);
 }
 
+// static ssize_t nmea_read_sentence(hal_gps_dev_t dev, char *sentence, size_t max_len) {
+//     hal_gps_context_t *ctx = (hal_gps_context_t*)dev;
+//     size_t idx = 0;
+//     while (idx + 1 < max_len) {
+//         uint8_t c;
+//         if (hal_uart_read(ctx->uart_dev, &c, 1) != 1) break;
+//         sentence[idx++] = c;
+//         if (c == '\n') break;
+//     }
+//     if (idx == 0) return 0;
+//     sentence[idx] = '\0';
+//     // Decodifica a sentença e atualiza tpv
+//     gps_decode(&ctx->tpv, sentence);
+//     hal_gps_fix_quality_t fq = hal_gps_get_fix_quality(dev);
+//     printf("Fix quality: %d\n", fq);
+//     return idx;
+// }
+
+// static ssize_t nmea_read_sentence(hal_gps_dev_t dev, char *sentence, size_t max_len) {
+//     hal_gps_context_t *ctx = (hal_gps_context_t*)dev;
+//     size_t idx = 0;
+//     uint8_t c;
+
+//     // Espera começar com $
+//     while (hal_uart_read(ctx->uart_dev, &c, 1) == 1 && c != '$');
+
+//     if (c != '$') return 0;
+
+//     sentence[idx++] = c;
+
+//     // Continua até \n
+//     while (idx + 1 < max_len) {
+//         if (hal_uart_read(ctx->uart_dev, &c, 1) != 1) break;
+//         sentence[idx++] = c;
+//         if (c == '\n') break;
+//     }
+
+//     sentence[idx] = '\0';
+//     gps_decode(&ctx->tpv, sentence);
+//     // printf("Fix quality: %d\n", hal_gps_get_fix_quality(dev));
+//     UTL_DBG_PRINTF(UTL_DBG_MOD_APP, "Fix quality: %d\n", hal_gps_get_fix_quality(dev));
+//     return idx;
+// }
+
 static ssize_t nmea_read_sentence(hal_gps_dev_t dev, char *sentence, size_t max_len) {
     hal_gps_context_t *ctx = (hal_gps_context_t*)dev;
     size_t idx = 0;
+    uint8_t c;
+    bool found_start_char = false;
+
+    const uint32_t SENTENCE_READ_TIMEOUT_MS = 500;
+    uint32_t start_time_ms = hal_cpu_time_get_ms();
+
     while (idx + 1 < max_len) {
-        uint8_t c;
-        if (hal_uart_read(ctx->uart_dev, &c, 1) != 1) break;
-        sentence[idx++] = c;
-        if (c == '\n') break;
+        if (hal_cpu_time_get_ms() - start_time_ms > SENTENCE_READ_TIMEOUT_MS) {
+            printf("nmea_read_sentence: Timeout occurred.\n");
+            break; // Exit loop on timeout
+        }
+
+        ssize_t bytes_read = hal_uart_read(ctx->uart_dev, &c, 1);
+
+        if (bytes_read == 1) { // Character successfully read
+            start_time_ms = hal_cpu_time_get_ms(); // Reset timeout
+
+            if (!found_start_char) {
+                if (c == '$') {
+                    found_start_char = true;
+                    // Add the '$' character and proceed to read the rest of the sentence
+                    sentence[idx++] = c;
+                }
+                // If not '$' and still haven't found '$', just continue (discard char)
+                // This 'continue' correctly discards junk BEFORE the '$'
+                continue; 
+            }
+
+            // If found_start_char is true, we always add the character
+            sentence[idx++] = c;
+
+            // If the current character is '\n', the sentence is complete
+            if (c == '\n') {
+                break; // Sentence complete, exit loop
+            }
+        } else if (bytes_read == 0) { // No byte read currently
+            // Wait a bit if no bytes are available
+            hal_cpu_sleep_ms(1);
+        } else { // bytes_read < 0 (read error)
+            printf("nmea_read_sentence: UART read error.\n");
+            break;
+        }
     }
-    if (idx == 0) return 0;
-    sentence[idx] = '\0';
-    // Decodifica a sentença e atualiza tpv
-    gps_decode(&ctx->tpv, sentence);
-    return idx;
+
+    sentence[idx] = '\0'; // Null-terminate the string
+
+    // If we didn't find the start character or read nothing, return 0
+    if (!found_start_char || idx == 0) {
+        return 0;
+    }
+
+    // Faça uma cópia da sentença NMEA antes de passá-la para gps_decode
+    // pois gps_decode modifica a string de entrada
+    char sentence_copy[max_len]; 
+    strncpy(sentence_copy, sentence, max_len);
+    sentence_copy[max_len - 1] = '\0'; // Garantir nul-terminação
+
+    // Decodifica a sentença usando a biblioteca GPS
+    // Passe a cópia para gps_decode
+
+    int decode_result = gps_decode(&ctx->tpv, sentence_copy); // <--- Use a cópia aqui
+    
+    // Decode the sentence using the GPS library
+    // int decode_result = gps_decode(&ctx->tpv, sentence);
+    
+    printf("Fix quality: %d\n", hal_gps_get_fix_quality(dev));
+    printf("GPS Decode Result: %d (%s)\n", decode_result);
+    
+    return idx; // Return the number of bytes read
 }
+
+    // sentence[idx] = '\0';
+
+    // // Se não encontramos o caractere de início ou nada foi lido, retorna 0
+    // if (!found_start_char || idx == 0) {
+    //     return 0;
+    // }
+
+    // // NENHUMA CÓPIA TEMPORÁRIA AQUI. 'sentence' é a string lida e NUL-terminada.
+    // // gps_decode vai modificar 'sentence' in-place.
+    // int decode_result = gps_decode(&ctx->tpv, sentence); // <--- Passe 'sentence' diretamente
+
+    // printf("Fix quality: %d\n", hal_gps_get_fix_quality(dev));
+    // printf("GPS Decode Result: %d (%s)\n", decode_result, gps_error_string(decode_result));
+
+    // return idx;
+// }
+
 
 // Driver instância
 static const hal_gps_driver_t nmea_driver = {
@@ -165,3 +290,9 @@ ssize_t hal_gps_read_sentence(hal_gps_dev_t dev, char *sentence, size_t max_len)
     assert(s_driver && dev);
     return s_driver->read_sentence(dev, sentence, max_len);
 }
+
+hal_gps_fix_quality_t hal_gps_get_fix_quality(hal_gps_dev_t dev) {
+    assert(s_driver && dev);
+    return s_driver->get_fix_quality(dev);
+}
+
