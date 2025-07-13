@@ -4,7 +4,6 @@ void hal_deinit(void)
 {
     hal_uart_deinit();
     hal_cpu_deinit();
-    hal_gps_deinit();
 }
 
 void hal_init(void)
