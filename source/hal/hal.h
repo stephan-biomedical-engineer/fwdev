@@ -33,9 +33,11 @@ extern "C"
 #include "utl_dbg.h"
 #include "hal_cpu.h"
 #include "hal_uart.h"
+#include "hal_gps.h"
 
 extern const hal_cpu_driver_t* HAL_CPU_DRIVER;
 extern const hal_uart_driver_t* HAL_UART_DRIVER;
+extern const hal_gps_driver_t* HAL_GPS_DRIVER;
 
 void hal_init(void);
 void hal_deinit(void);

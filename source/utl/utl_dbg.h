@@ -18,6 +18,8 @@ typedef enum utl_dbg_modules_e
 #undef X
 } utl_dbg_modules_t;
 
+#include <stdbool.h>
+
 void utl_dbg_init(void);
 void utl_dbg_mod_enable(utl_dbg_modules_t mod_idx);
 void utl_dbg_mod_disable(utl_dbg_modules_t mod_idx);
