@@ -12,6 +12,7 @@ void hal_init(void)
     utl_dbg_mod_enable(UTL_DBG_MOD_PORT);
     hal_cpu_init();
     hal_uart_init();
+    hal_gps_init();
 
     // init C random seed
     srand(hal_cpu_random_seed_get());

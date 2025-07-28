@@ -26,6 +26,7 @@
 /// Número máximo de portas suportadas (espelhando HAL_UART_NUM_PORTS)
 #define MAX_PORTS HAL_UART_NUM_PORTS
 
+<<<<<<< HEAD
 /// Tamanho do buffer circular interno por porta
 #define UART_BUF_SIZE 512
 
@@ -39,11 +40,18 @@ typedef struct {
     uint8_t cb_buf[UART_BUF_SIZE]; ///< Buffer real alocado
     pthread_t thread;              ///< Thread de leitura RX
     bool in_use;                   ///< Flag de uso
+=======
+typedef struct
+{
+    int fd;
+    hal_uart_config_t cfg;
+>>>>>>> linux_branch
 } linux_uart_t;
 
 /// Lista de portas UART ativas
 static linux_uart_t ports[MAX_PORTS];
 
+<<<<<<< HEAD
 // ─────────────────────────────────────────────
 // RX THREAD
 // ─────────────────────────────────────────────
@@ -84,17 +92,40 @@ static int configure_port(int fd, hal_uart_config_t* cfg) {
     struct termios tty;
     if (tcgetattr(fd, &tty) != 0) return -1;
     
+=======
+// --- Helpers de configuração termios ---
+static int configure_port(int fd, hal_uart_config_t* cfg)
+{
+    struct termios tty;
+    if(tcgetattr(fd, &tty) != 0)
+        return -1;
+
+    // baud rate
+>>>>>>> linux_branch
     speed_t speed;
-    switch (cfg->baud_rate) {
-        case HAL_UART_BAUD_RATE_9600:   speed = B9600;   break;
-        case HAL_UART_BAUD_RATE_19200:  speed = B19200;  break;
-        case HAL_UART_BAUD_RATE_38400:  speed = B38400;  break;
-        case HAL_UART_BAUD_RATE_57600:  speed = B57600;  break;
-        case HAL_UART_BAUD_RATE_115200: speed = B115200; break;
-        default: speed = B115200;
+    switch(cfg->baud_rate)
+    {
+    case HAL_UART_BAUD_RATE_9600:
+        speed = B9600;
+        break;
+    case HAL_UART_BAUD_RATE_19200:
+        speed = B19200;
+        break;
+    case HAL_UART_BAUD_RATE_38400:
+        speed = B38400;
+        break;
+    case HAL_UART_BAUD_RATE_57600:
+        speed = B57600;
+        break;
+    case HAL_UART_BAUD_RATE_115200:
+        speed = B115200;
+        break;
+    default:
+        speed = B115200;
     }
     cfsetispeed(&tty, speed);
     cfsetospeed(&tty, speed);
+<<<<<<< HEAD
     
     tty.c_cflag &= ~(PARENB | PARODD | CSTOPB | CRTSCTS);
     if (cfg->parity == HAL_UART_PARITY_ODD)   tty.c_cflag |= (PARENB | PARODD);
@@ -163,8 +194,75 @@ static hal_uart_dev_t linux_uart_open(hal_uart_port_t id, hal_uart_config_t* cfg
     utl_cbf_flush(&p->cb);
 
     pthread_create(&p->thread, NULL, rx_thread, p);
+=======
+
+    // parity
+    tty.c_cflag &= ~(PARENB | PARODD);
+    if(cfg->parity == HAL_UART_PARITY_ODD)
+        tty.c_cflag |= PARODD | PARENB;
+    if(cfg->parity == HAL_UART_PARITY_EVEN)
+        tty.c_cflag |= PARENB;
+
+    // stop bits
+    tty.c_cflag &= ~CSTOPB;
+    if(cfg->stop_bits == HAL_UART_STOP_BITS_2)
+        tty.c_cflag |= CSTOPB;
+
+    // flow control
+    tty.c_cflag &= ~CRTSCTS;
+    if(cfg->flow_control == HAL_UART_FLOW_CONTROL_CTS_RTS)
+        tty.c_cflag |= CRTSCTS;
+
+    tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // raw mode
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+    tty.c_oflag &= ~OPOST;
+
+    // apply
+    if(tcsetattr(fd, TCSANOW, &tty) != 0)
+        return -1;
+    return 0;
+}
+
+// --- Driver functions ---
+static void linux_uart_init(void)
+{
+    memset(ports, 0, sizeof(ports));
+}
+
+static void linux_uart_deinit(void)
+{
+    for(int i = 0; i < MAX_PORTS; i++)
+    {
+        if(ports[i].fd > 0)
+            close(ports[i].fd);
+    }
+}
+
+static hal_uart_dev_t linux_uart_open(hal_uart_port_t id, hal_uart_config_t* cfg)
+{
+    if(id < 0 || id >= MAX_PORTS)
+        return NULL;
+
+    int master_fd, slave_fd;
+    char slave_name[64];
+    if(openpty(&master_fd, &slave_fd, slave_name, NULL, NULL) < 0)
+        return NULL;
+
+    // configuramos o master_fd
+    if(configure_port(master_fd, cfg) < 0)
+    {
+        close(master_fd);
+        close(slave_fd);
+        return NULL;
+    }
+
+    ports[id].fd = master_fd;
+    ports[id].cfg = *cfg;
+>>>>>>> linux_branch
 
     fprintf(stderr, "[UART%d] virtual port: %s\n", id, slave_name);
+<<<<<<< HEAD
     return (hal_uart_dev_t)p;
 }
 
@@ -177,10 +275,22 @@ static void linux_uart_close(hal_uart_dev_t dev) {
     if (!p->in_use) return;
     p->in_use = false;
     pthread_join(p->thread, NULL);
+=======
+
+    return (hal_uart_dev_t) &ports[id];
+}
+
+static void linux_uart_close(hal_uart_dev_t dev)
+{
+    linux_uart_t* p = (linux_uart_t*) dev;
+    if(!p || p->fd < 0)
+        return;
+>>>>>>> linux_branch
     close(p->fd);
     p->fd = -1;
 }
 
+<<<<<<< HEAD
 /**
  * @brief Retorna número de bytes disponíveis no buffer RX.
  * @param dev Handle UART
@@ -228,6 +338,41 @@ static ssize_t linux_uart_write(hal_uart_dev_t dev, uint8_t* buf, size_t sz) {
  */
 static void linux_uart_flush(hal_uart_dev_t dev) {
     linux_uart_t* p = (linux_uart_t*)dev;
+=======
+static size_t linux_uart_bytes_available(hal_uart_dev_t dev)
+{
+    linux_uart_t* p = (linux_uart_t*) dev;
+    if(!p || p->fd < 0)
+        return 0;
+    fd_set rfds;
+    struct timeval tv = {0};
+    FD_ZERO(&rfds);
+    FD_SET(p->fd, &rfds);
+    return select(p->fd + 1, &rfds, NULL, NULL, &tv) > 0 ? 1 : 0;
+}
+
+static ssize_t linux_uart_read(hal_uart_dev_t dev, uint8_t* buf, size_t sz)
+{
+    linux_uart_t* p = (linux_uart_t*) dev;
+    if(!p || p->fd < 0)
+        return -1;
+    return read(p->fd, buf, sz);
+}
+
+static ssize_t linux_uart_write(hal_uart_dev_t dev, uint8_t* buf, size_t sz)
+{
+    linux_uart_t* p = (linux_uart_t*) dev;
+    if(!p || p->fd < 0)
+        return -1;
+    return write(p->fd, buf, sz);
+}
+
+static void linux_uart_flush(hal_uart_dev_t dev)
+{
+    linux_uart_t* p = (linux_uart_t*) dev;
+    if(!p || p->fd < 0)
+        return;
+>>>>>>> linux_branch
     tcdrain(p->fd);
 }
 
@@ -241,14 +386,14 @@ static void linux_uart_flush(hal_uart_dev_t dev) {
  * @brief Instância do driver UART para Linux.
  */
 static const hal_uart_driver_t linux_uart_driver = {
-    .init            = linux_uart_init,
-    .deinit          = linux_uart_deinit,
-    .open            = linux_uart_open,
-    .close           = linux_uart_close,
+    .init = linux_uart_init,
+    .deinit = linux_uart_deinit,
+    .open = linux_uart_open,
+    .close = linux_uart_close,
     .bytes_available = linux_uart_bytes_available,
-    .read            = linux_uart_read,
-    .write           = linux_uart_write,
-    .flush           = linux_uart_flush,
+    .read = linux_uart_read,
+    .write = linux_uart_write,
+    .flush = linux_uart_flush,
 };
 
 /**
