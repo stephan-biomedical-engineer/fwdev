@@ -28,6 +28,7 @@ THE SOFTWARE.
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h> // Para toupper()
 #include "utl_dbg.h" // Assuming you need this to use UTL_DBG_PRINTF
 #include "utl_printf.h" // Assuming you need this for UTL_DBG_PRINTF
 
@@ -104,6 +105,31 @@ static uint8_t build_hex_byte(const char c0, const char c1) {
 static bool match_sentence_id(const char *str, const char *id)
 {
     return strncmp(str, id, SENTENCE_ID_SIZE) == 0;
+}
+
+// Função para verificar o checksum de uma sentença NMEA
+static bool verify_nmea_checksum(const char* sentence) {
+    // Encontra o asterisco
+    const char* asterisk = strchr(sentence, '*');
+    if (!asterisk || asterisk - sentence < 6) // Mínimo: $XXXXX*CS
+        return false;
+    
+    // Calcula o checksum
+    uint8_t calculated = 0;
+    // Começa após o '$', até antes do '*'
+    for (const char* p = sentence + 1; p < asterisk; p++) {
+        calculated ^= *p;
+    }
+    
+    // Converte o checksum esperado para byte
+    char hex1 = toupper(*(asterisk + 1));
+    char hex2 = toupper(*(asterisk + 2));
+    
+    uint8_t expected = 0;
+    expected |= (hex1 >= 'A') ? (hex1 - 'A' + 10) << 4 : (hex1 - '0') << 4;
+    expected |= (hex2 >= 'A') ? (hex2 - 'A' + 10) : (hex2 - '0');
+    
+    return (calculated == expected);
 }
 
 static int32_t parse_number(const char *str)
@@ -581,12 +607,37 @@ static bool is_status_valid(const char status)
     return false;
 }
 
-static void parse_gga(struct gps_tpv *tpv, const char **token)
-{
-    parse_time(tpv->time, token[0]);
-    tpv->latitude = parse_angular_distance(token[1], token[2][0]);
-    tpv->longitude = parse_angular_distance(token[3], token[4][0]);
-    tpv->altitude = parse_altitude(token[8], token[9][0]);
+// static void parse_gga(struct gps_tpv *tpv, const char **token)
+// {
+//     parse_time(tpv->time, token[0]);
+//     tpv->latitude = parse_angular_distance(token[1], token[2][0]);
+//     tpv->longitude = parse_angular_distance(token[3], token[4][0]);
+//     tpv->altitude = parse_altitude(token[8], token[9][0]);
+// }
+
+static void parse_gga(struct gps_tpv *tpv, const char **token) {
+    // Token 0: Tempo UTC
+    if (token[0] && token[0][0]) {
+        parse_time(tpv->time, token[0]);
+    }
+    
+    // Token 1: Latitude
+    // Token 2: Direção latitude
+    if (token[1] && token[1][0] && token[2] && token[2][0]) {
+        tpv->latitude = parse_angular_distance(token[1], token[2][0]);
+    }
+    
+    // Token 3: Longitude
+    // Token 4: Direção longitude
+    if (token[3] && token[3][0] && token[4] && token[4][0]) {
+        tpv->longitude = parse_angular_distance(token[3], token[4][0]);
+    }
+    
+    // Token 8: Altitude
+    // Token 9: Unidade altitude
+    if (token[8] && token[8][0] && token[9] && token[9][0]) {
+        tpv->altitude = parse_altitude(token[8], token[9][0]);
+    }
 }
 
 static void parse_gll(struct gps_tpv *tpv, const char **token)
@@ -928,112 +979,172 @@ void print_tokens(int token_count, char **tokens) {
     }
 }
 
-int gps_decode(struct gps_tpv *tpv, char *nmea) {
-    assert(tpv != NULL);
-    assert(nmea != NULL);
+// int gps_decode(struct gps_tpv *tpv, char *nmea) {
+//     assert(tpv != NULL);
+//     assert(nmea != NULL);
 
-    printf("DEBUG gps_decode: Received NMEA: '%s'\n", nmea);
+//     printf("DEBUG gps_decode: Received NMEA: '%s'\n", nmea);
 
-    /* 1. Verificação inicial do cabeçalho */
+//     /* 1. Verificação inicial do cabeçalho */
+//     if (nmea[0] != '$') {
+//         return GPS_ERROR_HEAD;
+//     }
+
+//     /* 2. Encontrar posição do checksum */
+//     char *asterisk_ptr = strchr(nmea, '*');
+//     if (!asterisk_ptr) {
+//         return GPS_ERROR_TRUNCATED;
+//     }
+
+//     /* 3. Calcular checksum com unsigned char */
+//     uint8_t calculated_checksum = 0;
+//     unsigned char *p = (unsigned char*)(nmea + 1);
+    
+//     printf("Checksum calculation data: \"");
+//     while (p < (unsigned char*)asterisk_ptr) {
+//         printf("%c", *p);
+//         calculated_checksum ^= *p;
+//         p++;
+//     }
+//     printf("\"\n");
+
+//     /* 4. Extrair checksum esperado */
+//     if ((unsigned)(asterisk_ptr - nmea) + 3 > strlen(nmea)) {
+//         return GPS_ERROR_TRUNCATED;
+//     }
+    
+//     uint8_t expected_checksum = build_hex_byte(asterisk_ptr[1], asterisk_ptr[2]);
+//     printf("Checksum: Calc=0x%02X, Expected=0x%02X\n", calculated_checksum, expected_checksum);
+
+//     if (calculated_checksum != expected_checksum) {
+//         return GPS_ERROR_CHECKSUM;
+//     }
+
+//     /* 5. Verificar terminador */
+//     char *footer_ptr = asterisk_ptr + 3;
+//     if (*footer_ptr == '\r') {
+//         footer_ptr++;
+//     }
+//     if (*footer_ptr != '\n') {
+//         return GPS_ERROR_FOOT;
+//     }
+
+//     /* 6. Extrair Talker ID */
+//     tpv->talker_id[0] = nmea[1];
+//     tpv->talker_id[1] = nmea[2];
+//     tpv->talker_id[2] = '\0';
+
+//     /* 7. Determinar função de parse */
+//     parse_function parse = NULL;
+//     const char *sentence_id = nmea + 3;
+    
+//     if (match_sentence_id(sentence_id, "GGA")) parse = parse_gga;
+//     else if (match_sentence_id(sentence_id, "GLL")) parse = parse_gll;
+//     else if (match_sentence_id(sentence_id, "GSA")) parse = parse_gsa;
+//     else if (match_sentence_id(sentence_id, "RMC")) parse = parse_rmc;
+//     else if (match_sentence_id(sentence_id, "VTG")) parse = parse_vtg;
+//     else if (match_sentence_id(sentence_id, "ZDA")) parse = parse_zda;
+//     else return GPS_ERROR_UNSUPPORTED;
+
+//     char *tokens[NMEA_MAX_FIELDS] = {0};
+//     int token_count = 0;
+
+//     // Encontrar primeira vírgula após o tipo da sentença
+//     char *first_comma = strchr(nmea + 3, ',');
+//     if (!first_comma || first_comma >= asterisk_ptr) {
+//         return GPS_ERROR_TRUNCATED;
+//     }
+
+//     char *token_start = first_comma + 1;
+//     tokens[token_count++] = token_start;
+
+//     for (char *p = token_start; *p && p < asterisk_ptr; p++) {
+//         if (*p == ',') {
+//             *p = '\0';
+//             if (token_count < NMEA_MAX_FIELDS) {
+//                 tokens[token_count++] = p + 1;
+//             }
+//         }
+//     }
+
+//     // CORREÇÃO CRÍTICA: Remover checksum do último token
+//     if (token_count > 0) {
+//         char *last_token = tokens[token_count - 1];
+//         char *asterisk_in_token = strchr(last_token, '*');
+//         if (asterisk_in_token) {
+//             *asterisk_in_token = '\0'; // Remove checksum do token
+//         }
+//     }
+
+//     /* 9. Log dos tokens para depuração */
+//     // printf("Token count: %d\n", token_count);
+//     // for (int i = 0; i < token_count; i++) {
+//     //     printf("Token %d: '%s'\n", i, tokens[i]);
+//     // }
+//     print_tokens(token_count, tokens);
+
+//     /* 10. Chamar parser */
+//     parse(tpv, (const char **)tokens);
+
+//     return GPS_OK;
+// }
+
+int gps_decode(struct gps_tpv* tpv, char* nmea) {
+    // Passo 1: Verificar o header
     if (nmea[0] != '$') {
         return GPS_ERROR_HEAD;
     }
 
-    /* 2. Encontrar posição do checksum */
-    char *asterisk_ptr = strchr(nmea, '*');
-    if (!asterisk_ptr) {
-        return GPS_ERROR_TRUNCATED;
-    }
-
-    /* 3. Calcular checksum com unsigned char */
-    uint8_t calculated_checksum = 0;
-    unsigned char *p = (unsigned char*)(nmea + 1);
-    
-    printf("Checksum calculation data: \"");
-    while (p < (unsigned char*)asterisk_ptr) {
-        printf("%c", *p);
-        calculated_checksum ^= *p;
-        p++;
-    }
-    printf("\"\n");
-
-    /* 4. Extrair checksum esperado */
-    if ((unsigned)(asterisk_ptr - nmea) + 3 > strlen(nmea)) {
-        return GPS_ERROR_TRUNCATED;
-    }
-    
-    uint8_t expected_checksum = build_hex_byte(asterisk_ptr[1], asterisk_ptr[2]);
-    printf("Checksum: Calc=0x%02X, Expected=0x%02X\n", calculated_checksum, expected_checksum);
-
-    if (calculated_checksum != expected_checksum) {
+    // Passo 2: Verificar checksum
+    if (!verify_nmea_checksum(nmea)) {
         return GPS_ERROR_CHECKSUM;
     }
 
-    /* 5. Verificar terminador */
-    char *footer_ptr = asterisk_ptr + 3;
-    if (*footer_ptr == '\r') {
-        footer_ptr++;
-    }
-    if (*footer_ptr != '\n') {
-        return GPS_ERROR_FOOT;
-    }
-
-    /* 6. Extrair Talker ID */
+    // Passo 3: Encontrar fim da sentença
+    char* end = strstr(nmea, "\r\n");
+    if (!end) end = strchr(nmea, '\n');
+    if (!end) end = strchr(nmea, '\0');
+    
+    // Passo 4: Extrair talker ID
     tpv->talker_id[0] = nmea[1];
     tpv->talker_id[1] = nmea[2];
     tpv->talker_id[2] = '\0';
-
-    /* 7. Determinar função de parse */
-    parse_function parse = NULL;
-    const char *sentence_id = nmea + 3;
     
-    if (match_sentence_id(sentence_id, "GGA")) parse = parse_gga;
-    else if (match_sentence_id(sentence_id, "GLL")) parse = parse_gll;
-    else if (match_sentence_id(sentence_id, "GSA")) parse = parse_gsa;
-    else if (match_sentence_id(sentence_id, "RMC")) parse = parse_rmc;
-    else if (match_sentence_id(sentence_id, "VTG")) parse = parse_vtg;
-    else if (match_sentence_id(sentence_id, "ZDA")) parse = parse_zda;
+    // Passo 5: Determinar o parser
+    const char* sentence_id = nmea + 3;
+    parse_function parse = NULL;
+    
+    if (strncmp(sentence_id, "GGA", 3) == 0) parse = parse_gga;
+    else if (strncmp(sentence_id, "GSA", 3) == 0) parse = parse_gsa;
+    else if (strncmp(sentence_id, "RMC", 3) == 0) parse = parse_rmc;
+    else if (strncmp(sentence_id, "VTG", 3) == 0) parse = parse_vtg;
+    else if (strncmp(sentence_id, "GLL", 3) == 0) parse = parse_gll;
+    else if (strncmp(sentence_id, "ZDA", 3) == 0) parse = parse_zda;
     else return GPS_ERROR_UNSUPPORTED;
-
-    char *tokens[NMEA_MAX_FIELDS] = {0};
+    
+    // Passo 6: Tokenização
+    char* tokens[32] = {0};
     int token_count = 0;
-
-    // Encontrar primeira vírgula após o tipo da sentença
-    char *first_comma = strchr(nmea + 3, ',');
-    if (!first_comma || first_comma >= asterisk_ptr) {
-        return GPS_ERROR_TRUNCATED;
-    }
-
-    char *token_start = first_comma + 1;
-    tokens[token_count++] = token_start;
-
-    for (char *p = token_start; *p && p < asterisk_ptr; p++) {
-        if (*p == ',') {
-            *p = '\0';
-            if (token_count < NMEA_MAX_FIELDS) {
-                tokens[token_count++] = p + 1;
-            }
+    
+    char* start = (char*)(nmea + 6); // Após o tipo (ex: $GPGGA,)
+    char* current = start;
+    
+    while (*current && current < end && token_count < 31) {
+        if (*current == ',' || *current == '*') {
+            *current = '\0';
+            tokens[token_count++] = start;
+            start = current + 1;
         }
+        current++;
     }
-
-    // CORREÇÃO CRÍTICA: Remover checksum do último token
-    if (token_count > 0) {
-        char *last_token = tokens[token_count - 1];
-        char *asterisk_in_token = strchr(last_token, '*');
-        if (asterisk_in_token) {
-            *asterisk_in_token = '\0'; // Remove checksum do token
-        }
+    
+    // Último token
+    if (start < end) {
+        tokens[token_count++] = start;
     }
-
-    /* 9. Log dos tokens para depuração */
-    // printf("Token count: %d\n", token_count);
-    // for (int i = 0; i < token_count; i++) {
-    //     printf("Token %d: '%s'\n", i, tokens[i]);
-    // }
-    print_tokens(token_count, tokens);
-
-    /* 10. Chamar parser */
-    parse(tpv, (const char **)tokens);
-
+    
+    // Passo 7: Chamar o parser
+    parse(tpv, (const char**)tokens);
+    
     return GPS_OK;
 }
